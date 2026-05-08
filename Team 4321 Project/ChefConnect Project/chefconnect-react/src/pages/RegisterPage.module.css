@@ -1,0 +1,83 @@
+.page { padding-top: 64px; }
+.inner { max-width: 680px; margin: 0 auto; padding: 56px 40px; }
+
+.heading {
+  font-family: var(--font-display);
+  font-size: 34px; font-weight: 700; margin-bottom: 8px;
+}
+.sub { color: var(--muted); font-size: 15px; margin-bottom: 40px; }
+
+/* Step indicator */
+.steps {
+  display: flex;
+  margin-bottom: 40px;
+  border-bottom: none;
+}
+.step {
+  flex: 1;
+  text-align: center;
+  padding: 10px 0;
+  font-size: 12px; font-weight: 500;
+  color: var(--muted);
+  border-bottom: 2px solid var(--border);
+}
+.done   { color: var(--terracotta);  border-bottom-color: var(--terracotta); }
+.active { color: var(--charcoal);    border-bottom-color: var(--charcoal); }
+
+/* Form */
+.form { display: flex; flex-direction: column; gap: 4px; }
+.row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+.group { margin-bottom: 16px; }
+.group label {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
+}
+.group input,
+.group select,
+.group textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 14px;
+  color: var(--charcoal);
+  background: var(--cream);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.group input:focus,
+.group select:focus,
+.group textarea:focus { border-color: var(--terracotta); }
+.group textarea { resize: vertical; min-height: 88px; }
+
+/* Cuisine chips */
+.cuisinePicker { display: flex; flex-wrap: wrap; gap: 8px; }
+.cuisineChip {
+  background: var(--white);
+  border: 1px solid var(--border);
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 12px;
+  color: var(--bark);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cuisineChip:hover { border-color: var(--terracotta); color: var(--terracotta); }
+.cuisineSelected {
+  background: var(--terracotta-pale);
+  border-color: var(--terracotta);
+  color: var(--terracotta);
+}
+
+/* Actions */
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 24px;
+}

@@ -1,0 +1,118 @@
+.page { padding-top: 64px; }
+
+/* Header */
+.header {
+  background: var(--cream-dark);
+  padding: 48px 40px 36px;
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+.avatar {
+  width: 120px; height: 120px;
+  border-radius: 50%;
+  background: var(--charcoal);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 52px;
+  flex-shrink: 0;
+  border: 4px solid var(--white);
+}
+.info { flex: 1; }
+
+.name {
+  font-family: var(--font-display);
+  font-size: 32px; font-weight: 700;
+  margin-bottom: 6px;
+}
+.subtitle { color: var(--bark); font-size: 15px; margin-bottom: 16px; }
+
+.stats { display: flex; gap: 28px; margin-bottom: 16px; }
+.stat { text-align: center; }
+.stat strong { display: block; font-size: 20px; font-weight: 600; }
+.stat small { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+.bio {
+  color: var(--bark);
+  font-size: 14px;
+  line-height: 1.75;
+  max-width: 560px;
+}
+
+/* Body */
+.body {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 32px;
+  padding: 40px;
+  align-items: start;
+}
+.left {}
+
+.section { margin-bottom: 36px; }
+.section h2 {
+  font-family: var(--font-display);
+  font-size: 20px; font-weight: 600;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Availability */
+.availGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+}
+.dayBox {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 6px;
+  text-align: center;
+}
+.dayBox.open {
+  background: var(--terracotta-pale);
+  border-color: var(--terracotta);
+}
+.dayName {
+  display: block;
+  font-size: 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.dayHours {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--bark);
+}
+.dayBox.open .dayHours { color: var(--terracotta); }
+
+/* Dishes */
+.dishes { display: flex; gap: 8px; flex-wrap: wrap; }
+.dish {
+  background: var(--cream-dark);
+  color: var(--bark);
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 6px;
+}
+
+/* Reviews */
+.reviews { display: flex; flex-direction: column; gap: 14px; }
+.reviewCard {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+.reviewTop {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.reviewer { font-size: 13px; font-weight: 500; }
+.stars { color: var(--terracotta); font-size: 13px; }
+.reviewText { font-size: 13px; color: var(--bark); line-height: 1.65; }
