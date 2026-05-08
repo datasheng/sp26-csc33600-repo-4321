@@ -1,27 +1,48 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import ChefCard from '../components/ChefCard';
+import { CHEFS } from '../data/chefs';
 import styles from './BrowsePage.module.css';
 
-//  Fajke data 
-const ALL_CHEFS = [
-  { id: 1, emoji: '👩🏾‍🍳', name: 'Anika Osei',    location: 'Brooklyn, NY',   experience: 3,  tags: ['West African','Caribbean','Pantry Chef'], rating: 4.9, reviewCount: 48, price: 85,  badge: 'Premium' },
-  { id: 2, emoji: '👨🏻‍🍳', name: 'Marco Ferretti', location: 'Manhattan, NY',  experience: 7,  tags: ['Italian','Mediterranean'],                 rating: 4.8, reviewCount: 91, price: 110 },
-  { id: 3, emoji: '👩🏽‍🍳', name: 'Priya Nair',     location: 'Queens, NY',     experience: 2,  tags: ['Indian','South Asian','Vegan'],             rating: 4.7, reviewCount: 22, price: 70,  badge: 'New' },
-  { id: 4, emoji: '👨🏿‍🍳', name: 'Kwame Asante',  location: 'Bronx, NY',      experience: 5,  tags: ['Ghanaian','Jollof Specialist'],             rating: 5.0, reviewCount: 17, price: 90  },
-  { id: 5, emoji: '👩🏻‍🍳', name: 'Yuki Tanaka',   location: 'Manhattan, NY',  experience: 10, tags: ['Japanese','Omakase','Sushi'],               rating: 4.9, reviewCount: 63, price: 150 },
-  { id: 6, emoji: '👨🏽‍🍳', name: 'Diego Vargas',  location: 'Queens, NY',     experience: 6,  tags: ['Mexican','Colombian','Pantry Chef'],        rating: 4.8, reviewCount: 39, price: 95,  badge: 'Premium' },
+const CUISINES = [
+  'All', 'Caribbean', 'West African', 'Japanese', 'Italian', 'Indian',
+  'Latin American', 'Mexican', 'Korean', 'Middle Eastern',
 ];
-
-const CUISINES = ['All', 'Caribbean', 'West African', 'Japanese', 'Italian', 'Indian', 'Latin American', 'Middle Eastern', 'Korean'];
 
 export default function BrowsePage() {
   const [activeFilter, setActiveFilter] = useState('All');
-  const [query, setQuery] = useState('');
-  const [serviceType, setServiceType] = useState('Cuisine Chef');
+  const [query, setQuery]               = useState('');
+  const [serviceType, setServiceType]   = useState('Cuisine Chef');
 
-  const filtered = ALL_CHEFS.filter(chef => {
+  // API-shape state — ready to swap to a real fetch
+  const [chefs, setChefs]     = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState('');
+
+  useEffect(() => {
+    /* When the API is ready, replace with:
+     *
+     *   fetch('/api/chefs')
+     *     .then(r => r.ok ? r.json() : Promise.reject(r))
+     *     .then(setChefs)
+     *     .catch(() => setError('Could not load chefs. Please try again.'))
+     *     .finally(() => setLoading(false));
+     */
+    setLoading(true);
+    setError('');
+
+    const t = setTimeout(() => {
+      setChefs(CHEFS);
+      setLoading(false);
+    }, 250);
+
+    return () => clearTimeout(t);
+  }, []);
+
+  const filtered = chefs.filter(chef => {
     const matchesCuisine = activeFilter === 'All' || chef.tags.some(t => t.toLowerCase().includes(activeFilter.toLowerCase()));
-    const matchesQuery   = query === '' || chef.name.toLowerCase().includes(query.toLowerCase()) || chef.tags.some(t => t.toLowerCase().includes(query.toLowerCase()));
+    const matchesQuery   = query === '' ||
+      chef.name.toLowerCase().includes(query.toLowerCase()) ||
+      chef.tags.some(t => t.toLowerCase().includes(query.toLowerCase()));
     return matchesCuisine && matchesQuery;
   });
 
@@ -72,7 +93,27 @@ export default function BrowsePage() {
           ))}
         </div>
 
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className={styles.stateBox}>
+            <div className={styles.spinner} aria-hidden="true" />
+            <p>Loading chefs…</p>
+          </div>
+        ) : error ? (
+          <div className={styles.stateBox}>
+            <h3 className={styles.errorTitle}>Could not load chefs</h3>
+            <p>{error}</p>
+            <button
+              className={styles.retryBtn}
+              onClick={() => {
+                setError('');
+                setLoading(true);
+                setTimeout(() => { setChefs(CHEFS); setLoading(false); }, 250);
+              }}
+            >
+              Try again
+            </button>
+          </div>
+        ) : filtered.length === 0 ? (
           <p className={styles.empty}>No chefs match your search. Try a different filter.</p>
         ) : (
           <div className={styles.grid}>

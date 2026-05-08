@@ -1,0 +1,201 @@
+.page {
+  padding-top: 64px;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* ── Brand panel ───────────────────────────────────────────── */
+.brandPanel {
+  background: var(--charcoal);
+  color: var(--cream);
+  padding: 56px 48px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+}
+.brandPanel::before {
+  content: '';
+  position: absolute; inset: 0;
+  background-image:
+    radial-gradient(circle at 10% 20%, rgba(196,98,58,0.16) 0%, transparent 55%),
+    radial-gradient(circle at 90% 80%, rgba(232,133,106,0.10) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.brandLogo {
+  position: relative;
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--cream);
+  letter-spacing: -0.3px;
+  text-decoration: none;
+}
+.brandLogo span { color: var(--terracotta-light); }
+
+.brandQuote {
+  position: relative;
+  max-width: 420px;
+}
+.quoteText {
+  font-family: var(--font-display);
+  font-size: 38px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--cream);
+  margin-bottom: 18px;
+}
+.quoteText em {
+  font-style: italic;
+  color: var(--terracotta-light);
+}
+.quoteAuthor {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--terracotta-light);
+}
+
+.benefits {
+  position: relative;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.benefits li {
+  font-size: 14px;
+  color: rgba(250, 247, 242, 0.75);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.benefits li span {
+  width: 22px; height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--terracotta);
+  color: var(--white);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ── Form panel ────────────────────────────────────────────── */
+.formPanel {
+  background: var(--cream);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 48px;
+}
+
+.formInner {
+  width: 100%;
+  max-width: 380px;
+}
+
+.heading {
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--charcoal);
+  line-height: 1.2;
+}
+.sub {
+  font-size: 14px;
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+.inlineLink {
+  color: var(--terracotta);
+  font-weight: 500;
+  text-decoration: none;
+}
+.inlineLink:hover { text-decoration: underline; }
+
+.errorBox {
+  font-size: 13px;
+  color: #A32D2D;
+  background: #FCE8E8;
+  border: 0 solid rgba(163, 45, 45, 0.18);
+  border-radius: 8px;
+  opacity: 0;
+  max-height: 0;
+  overflow: hidden;
+  margin-bottom: 0;
+  padding: 0 14px;
+  transition: opacity 0.2s, max-height 0.2s, margin 0.2s, padding 0.2s, border-width 0.2s;
+}
+.errorVisible {
+  opacity: 1;
+  max-height: 80px;
+  margin-bottom: 16px;
+  padding: 10px 14px;
+  border-width: 1px;
+}
+
+.group { margin-bottom: 14px; }
+.group label {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
+}
+.group input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 11px 13px;
+  font-size: 14px;
+  color: var(--charcoal);
+  background: var(--white);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.group input:focus {
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(196, 98, 58, 0.10);
+}
+
+.submit {
+  width: 100%;
+  background: var(--terracotta);
+  border: none;
+  padding: 13px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s, opacity 0.2s;
+  margin-top: 6px;
+}
+.submit:hover:not(:disabled) { background: #B3562F; }
+.submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.legalNote {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 20px;
+  line-height: 1.7;
+}
+
+@media (max-width: 880px) {
+  .page { grid-template-columns: 1fr; }
+  .brandPanel {
+    padding: 28px 32px;
+    min-height: 0;
+  }
+  .brandQuote, .benefits { display: none; }
+  .formPanel { padding: 32px 28px 56px; }
+}

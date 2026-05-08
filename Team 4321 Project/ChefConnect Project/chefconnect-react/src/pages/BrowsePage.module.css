@@ -131,3 +131,44 @@
   font-size: 14px;
   padding: 40px 0;
 }
+
+/* ── Loading / error state boxes ─────────────────────────── */
+.stateBox {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+  font-size: 14px;
+}
+.stateBox p {
+  margin-top: 4px;
+}
+.errorTitle {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--charcoal);
+  margin-bottom: 6px;
+}
+.spinner {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  border: 2.5px solid var(--cream-dark);
+  border-top-color: var(--terracotta);
+  margin: 0 auto 12px;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.retryBtn {
+  margin-top: 14px;
+  background: var(--terracotta);
+  color: white;
+  border: none;
+  padding: 8px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.retryBtn:hover { background: #B3562F; }
