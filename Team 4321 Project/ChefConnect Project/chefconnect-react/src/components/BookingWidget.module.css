@@ -1,0 +1,80 @@
+.card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  position: sticky;
+  top: 80px;
+}
+
+.title {
+  font-family: var(--font-display);
+  font-size: 18px;
+  margin-bottom: 20px;
+}
+
+.group {
+  margin-bottom: 14px;
+}
+.group label {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
+}
+.group input,
+.group select,
+.group textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: var(--charcoal);
+  background: var(--cream);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.group input:focus,
+.group select:focus,
+.group textarea:focus { border-color: var(--terracotta); }
+.group textarea { resize: vertical; min-height: 72px; }
+
+.breakdown {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+  margin-top: 14px;
+}
+.row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  color: var(--bark);
+  margin-bottom: 7px;
+}
+.total {
+  font-weight: 500;
+  font-size: 15px;
+  color: var(--charcoal);
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-top: 6px;
+}
+
+.bookBtn {
+  width: 100%;
+  background: var(--terracotta);
+  border: none;
+  padding: 14px;
+  border-radius: var(--radius-md);
+  margin-top: 16px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.bookBtn:hover { background: #B3562F; }
