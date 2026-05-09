@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, chefs, dishes
+from app.routers import auth, chefs, dishes, bookings
 
 app = FastAPI(title="ChefConnect API", version="1.0.0")
 
@@ -15,6 +15,7 @@ app.add_middleware(
 app.include_router(auth.router)
 app.include_router(chefs.router)
 app.include_router(dishes.router)
+app.include_router(bookings.router)
 
 
 @app.get("/")
