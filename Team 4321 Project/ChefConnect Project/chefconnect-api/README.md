@@ -25,27 +25,39 @@ pip install -r requirements.txt
 
 ### 3. Create the database and run the schema
 
-Log into MySQL and run the schema file:
+**Option A — MySQL Workbench (recommended):**
+1. Open MySQL Workbench and connect to your server (`127.0.0.1:3306`, user `root`)
+2. Click **File → Open SQL Script** and select `schema.sql`
+3. Click the lightning bolt (Execute) button to run it
 
+**Option B — Terminal:**
 ```bash
-mysql -u root -p < schema.sql
+mysql -u root -p -h 127.0.0.1 < schema.sql
 ```
 
 This creates the `chefconnect` database and all 11 tables.
 
 ### 4. Create your `.env` file
 
-Create a `.env` file in this directory (it is gitignored):
+Copy the example and fill in your password:
+
+```bash
+cp .env.example .env
+```
+
+Then open `.env` and set your MySQL root password:
 
 ```
-DB_HOST=localhost
+DB_HOST=127.0.0.1
 DB_USER=root
-DB_PASSWORD=your_mysql_password
+DB_PASSWORD=your_password_here
 DB_NAME=chefconnect
-SECRET_KEY=your-secret-key-at-least-32-chars
+SECRET_KEY=any-long-random-string-at-least-32-chars
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
+
+> **Note:** Use `127.0.0.1` not `localhost`. On Mac, `localhost` uses socket authentication which bypasses passwords — `127.0.0.1` forces TCP and works correctly with your root password.
 
 ### 5. Seed the database
 
