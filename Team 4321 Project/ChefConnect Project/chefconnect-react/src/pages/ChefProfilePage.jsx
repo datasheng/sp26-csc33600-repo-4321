@@ -1,33 +1,8 @@
+import { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import BookingWidget from '../components/BookingWidget';
+import { getChefById } from '../data/chefs';
 import styles from './ChefProfilePage.module.css';
-
-/*  Fake data */
-const CHEF = {
-  id: 1,
-  emoji: '👩🏾‍🍳',
-  name: 'Anika Osei',
-  subtitle: 'West African & Caribbean · Brooklyn, NY · Cuisine Chef & Pantry Chef',
-  rating: 4.9,
-  reviewCount: 48,
-  bookingCount: 124,
-  experience: 3,
-  bio: 'I grew up cooking West African and Caribbean food with my grandmother. I specialise in Jollof, Egusi soup, Ackee & Saltfish, Oxtail, and can work with whatever ingredients you already have at home. Let me bring the flavours of home to your table.',
-  dishes: ['Jollof Rice', 'Egusi Soup', 'Ackee & Saltfish', 'Oxtail Stew', 'Suya Skewers', 'Puff Puff'],
-  availability: [
-    { day: 'Mon', hours: null },
-    { day: 'Tue', hours: '4–9pm' },
-    { day: 'Wed', hours: '4–9pm' },
-    { day: 'Thu', hours: null },
-    { day: 'Fri', hours: '3–10pm' },
-    { day: 'Sat', hours: 'All day' },
-    { day: 'Sun', hours: '12–7pm' },
-  ],
-  reviews: [
-    { id: 1, user: 'Marcus T.',  rating: 5, comment: 'Anika made the best Jollof I\'ve ever had outside of Lagos. She came in, checked my pantry, and worked with what I had. Absolutely amazing experience for my family dinner.' },
-    { id: 2, user: 'Sandra K.',  rating: 5, comment: 'We requested a full Caribbean spread for 8 people — oxtail, rice & peas, plantains — everything was perfect. Anika was professional, clean, and so warm with our guests.' },
-    { id: 3, user: 'Jamal F.',   rating: 4, comment: 'Great pantry chef experience. Told her what I had and she made something completely different than I expected — in the best way. Will book again.' },
-  ],
-};
 
 function Stars({ rating }) {
   return (
@@ -38,26 +13,84 @@ function Stars({ rating }) {
 }
 
 export default function ChefProfilePage() {
-  // In production: const { id } = useParams(); then fetch /api/chefs/${id}
+  const { id } = useParams();
 
+  const [chef, setChef]       = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState('');
+
+  useEffect(() => {
+    /* Stub fetch — when API is ready replace with:
+     *
+     *   fetch(`/api/chefs/${id}`)
+     *     .then(r => r.ok ? r.json() : Promise.reject(r))
+     *     .then(setChef)
+     *     .catch(() => setError('Could not load chef profile.'))
+     *     .finally(() => setLoading(false));
+     */
+    setLoading(true);
+    setError('');
+    setChef(null);
+
+    const t = setTimeout(() => {
+      const found = getChefById(id);
+      if (!found) setError('We couldn’t find that chef.');
+      else        setChef(found);
+      setLoading(false);
+    }, 250);
+
+    return () => clearTimeout(t);
+  }, [id]);
+
+  /* ── Loading state ─────────────────────────────────────── */
+  if (loading) {
+    return (
+      <main className={styles.page}>
+        <div className={styles.statePanel}>
+          <div className={styles.spinner} aria-hidden="true" />
+          <p className={styles.stateText}>Loading chef profile…</p>
+        </div>
+      </main>
+    );
+  }
+
+  /* ── Error / not-found state ───────────────────────────── */
+  if (error || !chef) {
+    return (
+      <main className={styles.page}>
+        <div className={styles.statePanel}>
+          <h2 className={styles.stateTitle}>{error || 'Chef not found'}</h2>
+          <p className={styles.stateText}>
+            The chef you’re looking for may have moved or is no longer
+            taking bookings.
+          </p>
+          <Link to="/" className={styles.stateBtn}>
+            ← Back to browse
+          </Link>
+        </div>
+      </main>
+    );
+  }
+
+  /* ── Loaded ────────────────────────────────────────────── */
   return (
     <main className={styles.page}>
 
       {/* Header */}
       <header className={styles.header}>
-        <div className={styles.avatar}>{CHEF.emoji}</div>
+        <div className={styles.avatar}>{chef.emoji}</div>
         <div className={styles.info}>
-          <h1 className={styles.name}>{CHEF.name}</h1>
-          <p className={styles.subtitle}>{CHEF.subtitle}</p>
+          <h1 className={styles.name}>{chef.name}</h1>
+          <p className={styles.subtitle}>{chef.subtitle}</p>
 
           <div className={styles.stats}>
-            <div className={styles.stat}><strong>{CHEF.rating}</strong><small>Rating</small></div>
-            <div className={styles.stat}><strong>{CHEF.reviewCount}</strong><small>Reviews</small></div>
-            <div className={styles.stat}><strong>{CHEF.bookingCount}</strong><small>Bookings</small></div>
-            <div className={styles.stat}><strong>{CHEF.experience} yrs</strong><small>Experience</small></div>
+            <div className={styles.stat}><strong>{chef.rating}</strong><small>Rating</small></div>
+            <div className={styles.stat}><strong>{chef.reviewCount}</strong><small>Reviews</small></div>
+            <div className={styles.stat}><strong>{chef.bookingCount}</strong><small>Bookings</small></div>
+            <div className={styles.stat}><strong>{chef.experience} yrs</strong><small>Experience</small></div>
           </div>
 
-          <p className={styles.bio}>{CHEF.bio}</p>
+          <p className={styles.bio}>{chef.bio}</p>
         </div>
       </header>
 
@@ -69,7 +102,7 @@ export default function ChefProfilePage() {
           <section className={styles.section}>
             <h2>Availability</h2>
             <div className={styles.availGrid}>
-              {CHEF.availability.map(a => (
+              {chef.availability.map(a => (
                 <div key={a.day} className={`${styles.dayBox} ${a.hours ? styles.open : ''}`}>
                   <span className={styles.dayName}>{a.day}</span>
                   <span className={styles.dayHours}>{a.hours ?? '—'}</span>
@@ -82,7 +115,7 @@ export default function ChefProfilePage() {
           <section className={styles.section}>
             <h2>Signature Dishes</h2>
             <div className={styles.dishes}>
-              {CHEF.dishes.map(d => (
+              {chef.dishes.map(d => (
                 <span key={d} className={styles.dish}>{d}</span>
               ))}
             </div>
@@ -91,22 +124,26 @@ export default function ChefProfilePage() {
           {/* Reviews */}
           <section className={styles.section}>
             <h2>Reviews</h2>
-            <div className={styles.reviews}>
-              {CHEF.reviews.map(r => (
-                <div key={r.id} className={styles.reviewCard}>
-                  <div className={styles.reviewTop}>
-                    <span className={styles.reviewer}>{r.user}</span>
-                    <Stars rating={r.rating} />
+            {chef.reviews.length === 0 ? (
+              <p className={styles.emptyText}>No reviews yet — be the first to book!</p>
+            ) : (
+              <div className={styles.reviews}>
+                {chef.reviews.map(r => (
+                  <div key={r.id} className={styles.reviewCard}>
+                    <div className={styles.reviewTop}>
+                      <span className={styles.reviewer}>{r.user}</span>
+                      <Stars rating={r.rating} />
+                    </div>
+                    <p className={styles.reviewText}>{r.comment}</p>
                   </div>
-                  <p className={styles.reviewText}>{r.comment}</p>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
         </div>
 
-        {/* Booking Widget */}
-        <BookingWidget chefName={CHEF.name} />
+        {/* Booking Widget — receives the full chef so price etc. match */}
+        <BookingWidget chef={chef} />
       </div>
     </main>
   );

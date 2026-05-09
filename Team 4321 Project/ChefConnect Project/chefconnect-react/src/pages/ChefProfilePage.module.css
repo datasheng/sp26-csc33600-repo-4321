@@ -1,5 +1,56 @@
 .page { padding-top: 64px; }
 
+/* ── Loading / error / empty state panels ─────────────────── */
+.statePanel {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 96px 32px;
+  text-align: center;
+}
+.stateTitle {
+  font-family: var(--font-display);
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--charcoal);
+  margin-bottom: 10px;
+}
+.stateText {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+.stateBtn {
+  display: inline-block;
+  background: var(--terracotta);
+  color: white;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.stateBtn:hover { background: #B3562F; }
+
+.spinner {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 2.5px solid var(--cream-dark);
+  border-top-color: var(--terracotta);
+  margin: 0 auto 14px;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.emptyText {
+  color: var(--muted);
+  font-size: 13px;
+  font-style: italic;
+}
+
 /* Header */
 .header {
   background: var(--cream-dark);

@@ -115,10 +115,1186 @@
 .colChef small  { display: block; font-size: 11px; color: var(--muted); }
 
 .miniAvatar {
-  width: 32px; height: 32px;
+  width: 38px; height: 38px;
   border-radius: 50%;
   background: var(--terracotta-pale);
   display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+/* ── Section heads (Upcoming / Past) ────────────────────── */
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.sectionHeadSpaced {
+  margin-top: 36px;
+}
+.countPill {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--bark);
+  background: var(--cream-dark);
+  padding: 2px 9px;
+  border-radius: 999px;
+  letter-spacing: 0.5px;
+}
+
+/* ── Booking cards ──────────────────────────────────────── */
+.bookingList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bookingCard {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: grid;
+  /* 4 fixed columns: chef | date | price | actions
+     The 200px action column keeps every row's date/price aligned
+     regardless of how many buttons sit on the right. */
+  grid-template-columns: 2fr 1fr 1fr 200px;
+  gap: 20px;
+  align-items: center;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.bookingCard:hover {
+  border-color: rgba(196, 98, 58, 0.35);
+  box-shadow: var(--shadow);
+}
+.bookingPast {
+  background: var(--cream);
+  opacity: 0.92;
+}
+.bookingPast:hover {
+  border-color: var(--border);
+  box-shadow: none;
+}
+
+.cardLeft {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.cardLeft strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--charcoal);
+  margin-bottom: 1px;
+}
+.cardLeft small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+/* `display: contents` removes .cardMid from the box tree but keeps its
+   children, so .dateBlock and .amountBlock land in the parent grid as
+   columns 2 and 3 — without touching the JSX. */
+.cardMid {
+  display: contents;
+}
+.dateBlock { display: flex; flex-direction: column; gap: 2px; }
+.dateMain {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--charcoal);
+}
+.dateSub {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.amountBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+}
+.amountMain {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--charcoal);
+}
+
+/* ── Card actions (Cancel / Reschedule / Review) ────────── */
+.cardActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  /* Pin to the right of the fixed-width column so a single
+     "Leave a review" button or a "Reviewed ✓" pill lines up
+     with the right edge of the wider [Reschedule][Cancel] pair. */
+  justify-content: flex-end;
+}
+.btnReschedule, .btnCancel, .btnGhost {
+  font-family: var(--font-body);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 7px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.btnReschedule {
+  background: var(--white);
+  border: 1px solid var(--border);
+  color: var(--bark);
+}
+.btnReschedule:hover:not(:disabled) {
+  border-color: var(--terracotta);
+  color: var(--terracotta);
+}
+.btnCancel {
+  background: transparent;
+  border: 1px solid rgba(163, 45, 45, 0.25);
+  color: #A32D2D;
+}
+.btnCancel:hover:not(:disabled) {
+  background: #FCE8E8;
+  border-color: #A32D2D;
+}
+.btnReschedule:disabled, .btnCancel:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.btnGhost {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--bark);
+}
+.btnGhost:hover {
+  border-color: var(--terracotta);
+  color: var(--terracotta);
+}
+.pastNote {
+  font-size: 18px;
+  color: var(--muted);
+  padding: 0 14px;
+}
+
+/* ── Empty state box ────────────────────────────────────── */
+.emptyBox {
+  background: var(--white);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  padding: 36px 24px;
+  text-align: center;
+}
+.emptyTitle {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--charcoal);
+  margin-bottom: 6px;
+}
+.emptyText {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+.emptyBox .emptyText:last-child { margin-bottom: 0; }
+.emptyBtn {
+  display: inline-block;
+  background: var(--terracotta);
+  color: white;
+  padding: 9px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s;
+}
+.emptyBtn:hover { background: #B3562F; }
+
+/* ── Loading / error state box ──────────────────────────── */
+.stateBox {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 40px 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+}
+.stateBox h4 {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--charcoal);
+  margin-bottom: 6px;
+}
+.spinner {
+  width: 24px; height: 24px;
+  border-radius: 50%;
+  border: 2.5px solid var(--cream-dark);
+  border-top-color: var(--terracotta);
+  margin: 0 auto 10px;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Toast ──────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--charcoal);
+  color: var(--cream);
+  padding: 12px 22px;
+  border-radius: var(--radius-pill);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: 0 8px 24px rgba(30, 26, 20, 0.20);
+  z-index: 200;
+  animation: toastIn 0.25s ease-out;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* ── Responsive: stack booking card on narrow screens ───── */
+@media (max-width: 880px) {
+  .bookingCard {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  /* On mobile, undo the desktop `display: contents` trick so date and
+     amount sit on a single row inside the stacked card layout. */
+  .cardMid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    align-items: center;
+  }
+  .cardActions {
+    justify-content: flex-end;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * Panel header (used by every non-Dashboard panel)
+ * ══════════════════════════════════════════════════════════════ */
+.panelHeader {
+  margin-bottom: 28px;
+  max-width: 640px;
+}
+.panelHeader h1 {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--charcoal);
+  margin-bottom: 6px;
+}
+.panelHeader p {
+  font-size: 14px;
+  color: var(--muted);
+  line-height: 1.65;
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * My Bookings — filter chips
+ * ══════════════════════════════════════════════════════════════ */
+.filterRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+.filterChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  padding: 7px 14px 7px 16px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--bark);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.filterChip:hover {
+  border-color: var(--terracotta);
+  color: var(--terracotta);
+}
+.filterChipActive {
+  background: var(--charcoal);
+  border-color: var(--charcoal);
+  color: var(--cream);
+}
+.filterChipActive:hover {
+  background: var(--charcoal);
+  border-color: var(--charcoal);
+  color: var(--cream);
+}
+.filterCount {
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--cream-dark);
+  color: var(--bark);
+  padding: 1px 8px;
+  border-radius: 999px;
+  letter-spacing: 0.4px;
+}
+.filterChipActive .filterCount {
+  background: rgba(250, 247, 242, 0.16);
+  color: var(--cream);
+}
+
+/* "Reviewed ✓" tag on past bookings already-reviewed */
+.reviewedTag {
+  font-size: 11px;
+  font-weight: 500;
+  color: #3B6D11;
+  background: #EAF5D3;
+  padding: 5px 12px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * Saved Chefs grid
+ * ══════════════════════════════════════════════════════════════ */
+.savedGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 18px;
+}
+.savedCard {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: transform 0.18s, box-shadow 0.18s;
+  display: flex;
+  flex-direction: column;
+}
+.savedCard:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-hover);
+}
+.savedImg {
+  height: 130px;
+  background: var(--cream-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.savedEmoji { font-size: 50px; }
+.savedBadge {
+  position: absolute;
+  top: 12px; left: 12px;
+  background: var(--charcoal);
+  color: var(--cream);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.savedRemoveBtn {
+  position: absolute;
+  top: 10px; right: 10px;
+  width: 28px; height: 28px;
+  background: rgba(30, 26, 20, 0.55);
+  color: var(--cream);
+  border: none;
+  border-radius: 50%;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.savedRemoveBtn:hover { background: rgba(163, 45, 45, 0.95); }
+.savedBody {
+  padding: 14px 16px 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.savedBody strong {
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--charcoal);
+  display: block;
+  margin-bottom: 2px;
+}
+.savedBody small {
+  font-size: 11.5px;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 10px;
+}
+.savedTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 12px;
+}
+.savedTag {
+  background: var(--cream-dark);
+  color: var(--bark);
+  font-size: 10.5px;
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.savedFoot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.savedRating {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--charcoal);
+}
+.savedPrice {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--terracotta);
+}
+.savedBookBtn {
+  display: block;
+  text-align: center;
+  background: var(--terracotta);
+  color: var(--white);
+  padding: 9px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.2s;
+  margin-top: auto;
+}
+.savedBookBtn:hover { background: #B3562F; }
+
+/* ══════════════════════════════════════════════════════════════
+ * Form card (used by Pantry, Settings)
+ * ══════════════════════════════════════════════════════════════ */
+.formCard {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 26px;
+  margin-bottom: 18px;
+}
+.formCardTitle {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--charcoal);
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.formGroup {
+  margin-bottom: 22px;
+}
+.formGroup:last-of-type {
+  margin-bottom: 0;
+}
+.formLabel {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+.formHelp {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 8px;
+  margin-top: -4px;
+  line-height: 1.5;
+}
+.formTextarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 11px 13px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--charcoal);
+  background: var(--cream);
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.formTextarea:focus {
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(196, 98, 58, 0.10);
+}
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 22px;
+}
+.savePrimary {
+  background: var(--terracotta);
+  border: none;
+  color: var(--white);
+  padding: 10px 22px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.savePrimary:hover { background: #B3562F; }
+
+/* Chip pickers (Pantry profile) */
+.chipPicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+.pickerChip {
+  background: var(--white);
+  border: 1px solid var(--border);
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  color: var(--bark);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.pickerChip:hover {
+  border-color: var(--terracotta);
+  color: var(--terracotta);
+}
+.pickerChipActive {
+  background: var(--terracotta-pale);
+  border-color: var(--terracotta);
+  color: var(--terracotta);
+  font-weight: 500;
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * My Reviews
+ * ══════════════════════════════════════════════════════════════ */
+.reviewsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.writtenReview {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px 22px;
+}
+.writtenReviewTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.writtenReviewText {
+  font-family: var(--font-display);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--bark);
+  line-height: 1.65;
+  padding-left: 14px;
+  border-left: 3px solid var(--terracotta-pale);
+  margin-bottom: 14px;
+}
+.writtenReviewFoot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+.writtenReviewDate {
+  font-size: 11.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.deleteLink {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+.deleteLink:hover {
+  color: #A32D2D;
+  background: #FCE8E8;
+}
+.starsDisplay {
+  color: var(--terracotta);
+  font-size: 15px;
+  letter-spacing: 1px;
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * Payments
+ * ══════════════════════════════════════════════════════════════ */
+.cardsList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.payCard {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.payCard:hover {
+  border-color: rgba(196, 98, 58, 0.35);
+  box-shadow: var(--shadow);
+}
+.payCardLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.payCardChip {
+  width: 44px; height: 32px;
+  background: linear-gradient(135deg, var(--cream-dark) 0%, var(--cream) 100%);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+}
+.payCardLeft strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--charcoal);
+  letter-spacing: 0.3px;
+}
+.payCardLeft small {
+  display: block;
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+.payCardRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.defaultBadge {
+  font-size: 10.5px;
+  font-weight: 500;
+  background: var(--terracotta-pale);
+  color: var(--terracotta);
+  padding: 4px 10px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+.linkBtn {
+  background: none;
+  border: none;
+  color: var(--terracotta);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.linkBtn:hover { background: var(--terracotta-pale); }
+.removeBtn {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.removeBtn:hover {
+  border-color: #A32D2D;
+  color: #A32D2D;
+}
+.addCardBtn {
+  background: transparent;
+  border: 1.5px dashed var(--border);
+  color: var(--bark);
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 4px;
+}
+.addCardBtn:hover {
+  border-color: var(--terracotta);
+  color: var(--terracotta);
+  background: rgba(196, 98, 58, 0.04);
+}
+
+/* Transactions table */
+.txTable {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.txRow {
+  display: grid;
+  grid-template-columns: 2fr 1.2fr 1fr 1fr;
+  gap: 16px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+  align-items: center;
+  font-size: 13px;
+}
+.txRow:last-child { border-bottom: none; }
+.txHead {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: var(--cream);
+}
+.txDesc {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.txDesc strong {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--charcoal);
+}
+.txDesc small {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.txCell {
+  color: var(--bark);
+}
+.miniAvatarSm {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--cream-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 15px;
   flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * Settings
+ * ══════════════════════════════════════════════════════════════ */
+.settingsRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--border);
+}
+.settingsRow:last-child { border-bottom: none; }
+.settingsRowLabel {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+}
+.settingsRowValue {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--charcoal);
+}
+
+.toggleRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  gap: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.toggleRow:last-of-type { border-bottom: none; }
+.toggleLabel {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--charcoal);
+  margin-bottom: 2px;
+}
+.toggleDesc {
+  display: block;
+  font-size: 12.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* iOS-style toggle switch */
+.toggle {
+  width: 42px;
+  height: 24px;
+  background: var(--cream-dark);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: background 0.2s, border-color 0.2s;
+}
+.toggleKnob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--white);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s;
+}
+.toggleOn {
+  background: var(--terracotta);
+  border-color: var(--terracotta);
+}
+.toggleOn .toggleKnob {
+  transform: translateX(18px);
+}
+
+/* Danger zone */
+.dangerCard {
+  border-color: rgba(163, 45, 45, 0.20);
+  background: #FDF6F6;
+}
+.dangerCard .formCardTitle {
+  color: #A32D2D;
+  border-bottom-color: rgba(163, 45, 45, 0.18);
+}
+.dangerText {
+  font-size: 13.5px;
+  color: var(--bark);
+  line-height: 1.7;
+  margin-bottom: 16px;
+  max-width: 520px;
+}
+.dangerBtn {
+  background: transparent;
+  border: 1px solid #A32D2D;
+  color: #A32D2D;
+  padding: 9px 18px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.dangerBtn:hover {
+  background: #A32D2D;
+  color: var(--white);
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * Review Modal
+ * ══════════════════════════════════════════════════════════════ */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(30, 26, 20, 0.55);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 300;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: overlayIn 0.18s ease-out;
+}
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.modalCard {
+  background: var(--cream);
+  border-radius: 16px;
+  padding: 32px 32px 24px;
+  width: 100%;
+  max-width: 480px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  position: relative;
+  box-shadow: 0 24px 64px rgba(30, 26, 20, 0.30);
+  animation: modalIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+.modalClose {
+  position: absolute;
+  top: 16px; right: 16px;
+  width: 32px; height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, color 0.15s;
+}
+.modalClose:hover {
+  background: var(--cream-dark);
+  color: var(--charcoal);
+}
+.modalEyebrow {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--terracotta);
+  background: var(--terracotta-pale);
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin-bottom: 18px;
+}
+
+.modalChef {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 22px;
+}
+.modalChefAvatar {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: var(--cream-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+}
+.modalChef strong {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--charcoal);
+  margin-bottom: 2px;
+}
+.modalChef small {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.modalGroup {
+  margin-bottom: 18px;
+}
+.modalLabel {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+/* Star rating widget */
+.starInput {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.starBtn {
+  background: none;
+  border: none;
+  font-size: 32px;
+  color: rgba(92, 74, 50, 0.18);
+  cursor: pointer;
+  padding: 0 2px;
+  line-height: 1;
+  transition: color 0.12s, transform 0.12s;
+}
+.starBtn:hover {
+  transform: scale(1.12);
+}
+.starBtnFilled {
+  color: var(--terracotta);
+}
+.starInputLabel {
+  margin-left: 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--bark);
+  font-style: italic;
+  align-self: center;
+}
+
+.modalTextarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-family: var(--font-body);
+  font-size: 14px;
+  color: var(--charcoal);
+  background: var(--white);
+  outline: none;
+  resize: vertical;
+  min-height: 110px;
+  line-height: 1.55;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.modalTextarea:focus {
+  border-color: var(--terracotta);
+  box-shadow: 0 0 0 3px rgba(196, 98, 58, 0.10);
+}
+.modalCounter {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 6px;
+  text-align: right;
+  letter-spacing: 0.5px;
+}
+
+.modalError {
+  font-size: 13px;
+  color: #A32D2D;
+  background: #FCE8E8;
+  border: 1px solid rgba(163, 45, 45, 0.18);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding-top: 8px;
+}
+.modalCancel {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--bark);
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.modalCancel:hover {
+  border-color: var(--charcoal);
+  color: var(--charcoal);
+}
+.modalSubmit {
+  background: var(--terracotta);
+  border: none;
+  color: var(--white);
+  padding: 10px 22px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.modalSubmit:hover { background: #B3562F; }
+
+/* Modal responsive */
+@media (max-width: 540px) {
+  .modalCard {
+    padding: 24px 22px 20px;
+  }
+  .modalChefAvatar {
+    width: 44px; height: 44px;
+    font-size: 22px;
+  }
+  .starBtn { font-size: 28px; }
+  .modalActions { flex-direction: column-reverse; }
+  .modalActions button { width: 100%; }
+}
+
+/* ══════════════════════════════════════════════════════════════
+ * Responsive: Payments + Settings
+ * ══════════════════════════════════════════════════════════════ */
+@media (max-width: 880px) {
+  .payCard {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+  .payCardRight {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .txRow {
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .txHead {
+    display: none;
+  }
 }
