@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import BookingWidget from '../components/BookingWidget';
-import { getChefById } from '../data/chefs';
+import { fetchChefById } from '../data/chefs';
 import styles from './ChefProfilePage.module.css';
 
 function Stars({ rating }) {
@@ -20,26 +20,14 @@ export default function ChefProfilePage() {
   const [error, setError]     = useState('');
 
   useEffect(() => {
-    /* Stub fetch — when API is ready replace with:
-     *
-     *   fetch(`/api/chefs/${id}`)
-     *     .then(r => r.ok ? r.json() : Promise.reject(r))
-     *     .then(setChef)
-     *     .catch(() => setError('Could not load chef profile.'))
-     *     .finally(() => setLoading(false));
-     */
     setLoading(true);
     setError('');
     setChef(null);
 
-    const t = setTimeout(() => {
-      const found = getChefById(id);
-      if (!found) setError('We couldn’t find that chef.');
-      else        setChef(found);
-      setLoading(false);
-    }, 250);
-
-    return () => clearTimeout(t);
+    fetchChefById(id)
+      .then(setChef)
+      .catch(err => setError(err.message ?? 'Could not load chef profile.'))
+      .finally(() => setLoading(false));
   }, [id]);
 
   /* ── Loading state ─────────────────────────────────────── */
@@ -61,7 +49,7 @@ export default function ChefProfilePage() {
         <div className={styles.statePanel}>
           <h2 className={styles.stateTitle}>{error || 'Chef not found'}</h2>
           <p className={styles.stateText}>
-            The chef you’re looking for may have moved or is no longer
+            The chef you're looking for may have moved or is no longer
             taking bookings.
           </p>
           <Link to="/" className={styles.stateBtn}>
@@ -114,11 +102,15 @@ export default function ChefProfilePage() {
           {/* Signature Dishes */}
           <section className={styles.section}>
             <h2>Signature Dishes</h2>
-            <div className={styles.dishes}>
-              {chef.dishes.map(d => (
-                <span key={d} className={styles.dish}>{d}</span>
-              ))}
-            </div>
+            {chef.dishes.length === 0 ? (
+              <p className={styles.emptyText}>No dishes listed yet.</p>
+            ) : (
+              <div className={styles.dishes}>
+                {chef.dishes.map(d => (
+                  <span key={d} className={styles.dish}>{d}</span>
+                ))}
+              </div>
+            )}
           </section>
 
           {/* Reviews */}
@@ -142,7 +134,7 @@ export default function ChefProfilePage() {
           </section>
         </div>
 
-        {/* Booking Widget — receives the full chef so price etc. match */}
+        {/* Booking Widget */}
         <BookingWidget chef={chef} />
       </div>
     </main>

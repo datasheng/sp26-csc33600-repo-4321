@@ -1,9 +1,17 @@
 from os import name
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 import mysql.connector
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 def get_db_connection():
     return mysql.connector.connect(

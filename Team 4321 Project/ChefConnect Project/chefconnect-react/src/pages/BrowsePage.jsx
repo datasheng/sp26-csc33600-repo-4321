@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import ChefCard from '../components/ChefCard';
-import { CHEFS } from '../data/chefs';
+import { fetchChefs } from '../data/chefs';
 import styles from './BrowsePage.module.css';
 
 const CUISINES = [
@@ -13,34 +13,28 @@ export default function BrowsePage() {
   const [query, setQuery]               = useState('');
   const [serviceType, setServiceType]   = useState('Cuisine Chef');
 
-  // API-shape state — ready to swap to a real fetch
   const [chefs, setChefs]     = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState('');
 
-  useEffect(() => {
-    /* When the API is ready, replace with:
-     *
-     *   fetch('/api/chefs')
-     *     .then(r => r.ok ? r.json() : Promise.reject(r))
-     *     .then(setChefs)
-     *     .catch(() => setError('Could not load chefs. Please try again.'))
-     *     .finally(() => setLoading(false));
-     */
+  const loadChefs = useCallback(() => {
     setLoading(true);
     setError('');
 
-    const t = setTimeout(() => {
-      setChefs(CHEFS);
-      setLoading(false);
-    }, 250);
-
-    return () => clearTimeout(t);
+    fetchChefs()
+      .then(setChefs)
+      .catch(() => setError('Could not load chefs. Make sure the backend is running at http://localhost:8000.'))
+      .finally(() => setLoading(false));
   }, []);
 
+  useEffect(() => {
+    loadChefs();
+  }, [loadChefs]);
+
   const filtered = chefs.filter(chef => {
-    const matchesCuisine = activeFilter === 'All' || chef.tags.some(t => t.toLowerCase().includes(activeFilter.toLowerCase()));
-    const matchesQuery   = query === '' ||
+    const matchesCuisine = activeFilter === 'All' ||
+      chef.tags.some(t => t.toLowerCase().includes(activeFilter.toLowerCase()));
+    const matchesQuery = query === '' ||
       chef.name.toLowerCase().includes(query.toLowerCase()) ||
       chef.tags.some(t => t.toLowerCase().includes(query.toLowerCase()));
     return matchesCuisine && matchesQuery;
@@ -102,14 +96,7 @@ export default function BrowsePage() {
           <div className={styles.stateBox}>
             <h3 className={styles.errorTitle}>Could not load chefs</h3>
             <p>{error}</p>
-            <button
-              className={styles.retryBtn}
-              onClick={() => {
-                setError('');
-                setLoading(true);
-                setTimeout(() => { setChefs(CHEFS); setLoading(false); }, 250);
-              }}
-            >
+            <button className={styles.retryBtn} onClick={loadChefs}>
               Try again
             </button>
           </div>
