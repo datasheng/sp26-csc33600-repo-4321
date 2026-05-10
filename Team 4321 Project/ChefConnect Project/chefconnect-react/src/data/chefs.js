@@ -32,14 +32,19 @@ const DAY_ABBREV = {
 
 // Converts "16:00:00" → 4, "09:00:00" → 9
 function parseHour(timeStr) {
-  return parseInt(timeStr.split(':')[0], 10);
+  if (!timeStr && timeStr !== 0) return 0;
+  if (typeof timeStr === 'number') {
+    return Math.floor(timeStr / 3600);
+  }
+  return parseInt(String(timeStr).split(':')[0], 10);
 }
 
 // Converts hour number → "4pm", "11am", "12pm"
 function formatHour(h) {
-  if (h === 12) return '12pm';
   if (h === 0)  return '12am';
-  return h < 12 ? `${h}am` : `${h - 12}pm`;
+  if (h === 12) return '12pm';
+  if (h < 12)   return `${h}am`;
+  return `${h - 12}pm`;
 }
 
 // Converts {day_of_week, start_time, end_time} slots
@@ -51,13 +56,11 @@ function buildAvailability(slots) {
     if (!abbrev) continue;
     const startH = parseHour(slot.start_time);
     const endH   = parseHour(slot.end_time);
-    // "All day" if start is before 10am and end is after 8pm
     const hours = (startH <= 9 && endH >= 20)
       ? 'All day'
       : `${formatHour(startH)}–${formatHour(endH)}`;
     map[abbrev] = hours;
   }
-  // Return all 7 days in order; null for days with no slot
   return DAY_ORDER.map(day => ({ day, hours: map[day] ?? null }));
 }
 
