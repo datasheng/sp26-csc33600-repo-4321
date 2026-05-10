@@ -2,51 +2,63 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styles from './LoginPage.module.css';
 
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const BASE_URL = 'http://localhost:8000';
 
 export default function LoginPage() {
   const navigate = useNavigate();
 
-  const [email, setEmail]       = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError]       = useState('');
   const [loading, setLoading]   = useState(false);
 
   function validate() {
-    if (!email.trim())         return 'Please enter your email.';
-    if (!EMAIL_RE.test(email)) return 'Please enter a valid email address.';
-    if (!password)             return 'Please enter your password.';
-    if (password.length < 6)   return 'Password must be at least 6 characters.';
+    if (!username.trim()) return 'Please enter your username.';
+    if (!password)        return 'Please enter your password.';
+    if (password.length < 6) return 'Password must be at least 6 characters.';
     return '';
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError('');
 
     const msg = validate();
-    if (msg) {
-      setError(msg);
-      return;
-    }
+    if (msg) { setError(msg); return; }
 
-    /* ── Backend stub ──────────────────────────────────────────
-     * Replace with real fetch when API is ready, e.g.:
-     *
-     *   const res = await fetch('/api/auth/login', {...});
-     *   if (!res.ok) setError('Invalid email or password.');
-     *   else navigate('/dashboard');
-     * ──────────────────────────────────────────────────────── */
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const res = await fetch(
+        `${BASE_URL}/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
+        { method: 'POST' }
+      );
+
+      const data = await res.json();
+
+      if (!data.user) {
+        setError(data.message ?? 'Invalid username or password.');
+        setLoading(false);
+        return;
+      }
+
+      // Save logged-in user to localStorage so Dashboard can read it
+      localStorage.setItem('cc_user', JSON.stringify({
+        user_id:   data.user.user_id,
+        username:  data.user.username,
+        email:     data.user.email,
+        role_name: data.user.role_name,
+      }));
+
       navigate('/dashboard');
-    }, 600);
+    } catch (err) {
+      setError('Could not connect to the server. Make sure the backend is running.');
+      setLoading(false);
+    }
   }
 
   return (
     <main className={styles.page}>
-      {/* Brand panel — dark, warm, editorial */}
+      {/* Brand panel */}
       <aside className={styles.brandPanel}>
         <Link to="/" className={styles.brandLogo}>
           Chef<span>Connect</span>
@@ -54,7 +66,7 @@ export default function LoginPage() {
 
         <div className={styles.brandQuote}>
           <p className={styles.quoteText}>
-            “The kitchen is where I find my grandmother again.”
+            "The kitchen is where I find my grandmother again."
           </p>
           <span className={styles.quoteAuthor}>— Anika, ChefConnect chef</span>
         </div>
@@ -70,11 +82,10 @@ export default function LoginPage() {
         <div className={styles.formInner}>
           <h1 className={styles.heading}>Welcome back</h1>
           <p className={styles.sub}>
-            Don’t have an account?{' '}
+            Don't have an account?{' '}
             <Link to="/signup" className={styles.inlineLink}>Sign up</Link>
           </p>
 
-          {/* Error region — always rendered for screen-readers */}
           <div
             role="alert"
             aria-live="polite"
@@ -85,14 +96,14 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} noValidate>
             <div className={styles.group}>
-              <label htmlFor="login-email">Email</label>
+              <label htmlFor="login-username">Username</label>
               <input
-                id="login-email"
-                type="email"
-                autoComplete="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
+                id="login-username"
+                type="text"
+                autoComplete="username"
+                placeholder="your_username"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
               />
             </div>
 

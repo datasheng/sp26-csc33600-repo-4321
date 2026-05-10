@@ -14,11 +14,11 @@ const BASE_URL = 'http://localhost:8000';
 
 /* ── Static fields the backend doesn't store ──────────────── */
 const CHEF_SUPPLEMENT = {
-  1: { emoji: '👩🏾‍🍳', badge: 'Premium', experience: 3,  bookingCount: 124, price: 85,  location: 'Brooklyn, NY',  tags: ['West African', 'Caribbean', 'Pantry Chef'] },
-  2: { emoji: '👨🏻‍🍳', badge: null,      experience: 7,  bookingCount: 210, price: 110, location: 'Manhattan, NY', tags: ['Italian', 'Mediterranean'] },
-  3: { emoji: '👩🏽‍🍳', badge: 'New',     experience: 2,  bookingCount: 41,  price: 70,  location: 'Queens, NY',    tags: ['Indian', 'South Asian', 'Vegan'] },
-  4: { emoji: '👨🏿‍🍳', badge: null,      experience: 5,  bookingCount: 38,  price: 90,  location: 'Bronx, NY',     tags: ['Ghanaian', 'Jollof Specialist'] },
-  5: { emoji: '👩🏻‍🍳', badge: null,      experience: 10, bookingCount: 156, price: 150, location: 'Manhattan, NY', tags: ['Japanese', 'Omakase', 'Sushi'] },
+  1: { emoji: '👩🏾‍🍳', badge: 'Premium', experience: 3,  bookingCount: 124, price: 85,  location: 'Brooklyn, NY',  tags: ['West African', 'Caribbean', 'Cuisine Chef', 'Pantry Chef'] },
+  2: { emoji: '👨🏻‍🍳', badge: null,      experience: 7,  bookingCount: 210, price: 110, location: 'Manhattan, NY', tags: ['Italian', 'Mediterranean','Cuisine Chef'] },
+  3: { emoji: '👩🏽‍🍳', badge: 'New',     experience: 2,  bookingCount: 41,  price: 70,  location: 'Queens, NY',    tags: ['Indian', 'South Asian', 'Vegan', 'Cuisine Chef'] },
+  4: { emoji: '👨🏿‍🍳', badge: null,      experience: 5,  bookingCount: 38,  price: 90,  location: 'Bronx, NY',     tags: ['Ghanaian', 'Jollof Specialist', 'Cuisine Chef', 'Pantry Chef'] },
+  5: { emoji: '👩🏻‍🍳', badge: null,      experience: 10, bookingCount: 156, price: 150, location: 'Manhattan, NY', tags: ['Japanese', 'Omakase', 'Sushi', 'Pantry Chef'] },
   6: { emoji: '👨🏽‍🍳', badge: 'Premium', experience: 6,  bookingCount: 88,  price: 95,  location: 'Queens, NY',    tags: ['Mexican', 'Colombian', 'Pantry Chef'] },
 };
 
@@ -182,9 +182,9 @@ export async function fetchChefById(id) {
 export const CHEFS = [
   {
     id: 1, emoji: '👩🏾‍🍳', name: 'Anika Osei', location: 'Brooklyn, NY',
-    experience: 3, tags: ['West African', 'Caribbean', 'Pantry Chef'],
+    experience: 3, tags: ['West African', 'Caribbean', 'Cuisine Chef', 'Pantry Chef'],
     rating: 4.9, reviewCount: 48, bookingCount: 124, price: 85, badge: 'Premium',
-    subtitle: 'West African & Caribbean · Brooklyn, NY · Cuisine Chef & Pantry Chef',
+    subtitle: 'West African & Caribbean · Brooklyn, NY',
     bio: "I grew up cooking West African and Caribbean food with my grandmother. I specialise in Jollof, Egusi soup, Ackee & Saltfish, Oxtail, and can work with whatever ingredients you already have at home.",
     dishes: ['Jollof Rice', 'Egusi Soup', 'Ackee & Saltfish', 'Oxtail Stew', 'Suya Skewers', 'Puff Puff'],
     availability: [
@@ -201,9 +201,9 @@ export const CHEFS = [
   },
   {
     id: 2, emoji: '👨🏻‍🍳', name: 'Marco Ferretti', location: 'Manhattan, NY',
-    experience: 7, tags: ['Italian', 'Mediterranean'],
+    experience: 7, tags: ['Italian', 'Mediterranean', 'Cuisine Chef'],
     rating: 4.8, reviewCount: 91, bookingCount: 210, price: 110, badge: null,
-    subtitle: 'Italian & Mediterranean · Manhattan, NY · Cuisine Chef',
+    subtitle: 'Italian & Mediterranean · Manhattan, NY',
     bio: "Trained in Bologna, I bring a slow-food approach to handmade pasta, regional Italian classics, and Mediterranean fish dishes.",
     dishes: ['Tagliatelle al Ragù', 'Cacio e Pepe', 'Saltimbocca', 'Branzino al Forno', 'Tiramisù', 'Focaccia di Recco'],
     availability: [
@@ -220,7 +220,7 @@ export const CHEFS = [
   },
   {
     id: 3, emoji: '👩🏽‍🍳', name: 'Priya Nair', location: 'Queens, NY',
-    experience: 2, tags: ['Indian', 'South Asian', 'Vegan'],
+    experience: 2, tags: ['Indian', 'South Asian', 'Vegan', 'Cuisine Chef'],
     rating: 4.7, reviewCount: 22, bookingCount: 41, price: 70, badge: 'New',
     subtitle: 'Indian & South Asian · Queens, NY · Vegan-friendly',
     bio: "Kerala-born, NYC-based. I cook the way my mother and aunts taught me — coconut, curry leaves, tamarind, and proper masala technique.",
@@ -239,7 +239,7 @@ export const CHEFS = [
   },
   {
     id: 4, emoji: '👨🏿‍🍳', name: 'Kwame Asante', location: 'Bronx, NY',
-    experience: 5, tags: ['Ghanaian', 'Jollof Specialist'],
+    experience: 5, tags: ['Ghanaian', 'Jollof Specialist', 'Cuisine Chef', 'Pantry Chef'],
     rating: 5.0, reviewCount: 17, bookingCount: 38, price: 90, badge: null,
     subtitle: 'Ghanaian · Bronx, NY · Jollof specialist',
     bio: "Born in Kumasi, raised between Accra and the Bronx. Jollof is my obsession — I will defend the Ghanaian version against all comers.",
@@ -257,7 +257,7 @@ export const CHEFS = [
   },
   {
     id: 5, emoji: '👩🏻‍🍳', name: 'Yuki Tanaka', location: 'Manhattan, NY',
-    experience: 10, tags: ['Japanese', 'Omakase', 'Sushi'],
+    experience: 10, tags: ['Japanese', 'Omakase', 'Sushi','Pantry Chef'],
     rating: 4.9, reviewCount: 63, bookingCount: 156, price: 150, badge: null,
     subtitle: 'Japanese · Manhattan, NY · Omakase & Sushi',
     bio: 'Trained for seven years in Tokyo before moving to New York. I do quiet, precise omakase dinners in your home.',
@@ -277,7 +277,7 @@ export const CHEFS = [
     id: 6, emoji: '👨🏽‍🍳', name: 'Diego Vargas', location: 'Queens, NY',
     experience: 6, tags: ['Mexican', 'Colombian', 'Pantry Chef'],
     rating: 4.8, reviewCount: 39, bookingCount: 88, price: 95, badge: 'Premium',
-    subtitle: 'Mexican & Colombian · Queens, NY · Cuisine Chef & Pantry Chef',
+    subtitle: 'Mexican & Colombian · Queens, NY',
     bio: 'Half Mexican, half Colombian, all New Yorker. I cook from both sides of my family — fresh tortillas, slow moles, arepas, sancocho.',
     dishes: ['Mole Poblano', 'Arepas con Queso', 'Sancocho', 'Tacos al Pastor', 'Bandeja Paisa', 'Tres Leches'],
     availability: [
