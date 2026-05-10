@@ -1,6 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 import mysql.connector
+from mysql.connector import Error as MySQLError
 import bcrypt
 
 app = FastAPI()
@@ -11,6 +13,20 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.exception_handler(MySQLError)
+async def db_exception_handler(request: Request, exc: MySQLError):
+    return JSONResponse(
+        status_code=500,
+        content={"error": "A database error occurred. Please try again."}
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    return JSONResponse(
+        status_code=500,
+        content={"error": "An unexpected error occurred. Please try again."}
+    )
 
 def get_db_connection():
     return mysql.connector.connect(
@@ -58,6 +74,13 @@ def get_bookings():
 
 @app.post("/register")
 def register_user(username: str, email: str, password_hash: str, role: str):
+
+    if '@' not in email or '.' not in email.split('@')[-1]:
+        return {"error": "Invalid email address."}
+    if len(username.strip()) < 2:
+        return {"error": "Username must be at least 2 characters."}
+    if len(password_hash) < 6:
+        return {"error": "Password must be at least 6 characters."}
 
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -415,6 +438,9 @@ def create_review(
     rating: int,
     comment: str = None
 ):
+    if rating < 1 or rating > 5:
+        return {"error": "Rating must be between 1 and 5."}
+
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -474,6 +500,9 @@ def add_chef_dish(
     description: str = None,
     price: float = None
 ):
+    if price is not None and price < 0:
+        return {"error": "Price cannot be negative."}
+
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
