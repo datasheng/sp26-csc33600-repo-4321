@@ -38,19 +38,6 @@ CREATE TABLE MembershipPlan (
     duration_months int NOT NULL
 );
 
-CREATE TABLE ChefMembership (
-    membership_id INT AUTO_INCREMENT PRIMARY KEY,
-    chef_id int NOT NULL,
-    plan_id int NOT NULL,
-    membership_type VARCHAR(255) NOT NULL,
-
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-
-    FOREIGN KEY (chef_id) REFERENCES Chef(chef_id)
-    foreign key (plan_id) references MembershipPlan(plan_id)
-);
-
 CREATE TABLE Booking (
     booking_id INT AUTO_INCREMENT PRIMARY KEY,
     chef_id int NOT NULL,
@@ -109,6 +96,7 @@ CREATE TABLE ChefMembership (
     membership_id INT AUTO_INCREMENT PRIMARY KEY,
     chef_id int NOT NULL,
     plan_id int NOT NULL,
+    membership_type VARCHAR(255),
     start_date DATE NOT NULL,
     end_date DATE,
     FOREIGN KEY (chef_id) REFERENCES Chef(chef_id),

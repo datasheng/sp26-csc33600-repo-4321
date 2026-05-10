@@ -1,8 +1,7 @@
-from os import name
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import mysql.connector
+import bcrypt
 
 app = FastAPI()
 
@@ -74,7 +73,8 @@ def register_user(username: str, email: str, password_hash: str, role: str):
     VALUES (%s, %s, %s, %s)
     """
 
-    cursor.execute(user_sql, (username, email, password_hash, role_id))
+    hashed = bcrypt.hashpw(password_hash.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    cursor.execute(user_sql, (username, email, hashed, role_id))
     conn.commit()
 
     user_id = cursor.lastrowid
@@ -100,24 +100,25 @@ def login(username: str, password: str):
     cursor = conn.cursor(dictionary=True)
 
     login_sql = """
-    SELECT 
-    u.user_id, u.username, u.email, r.role_name
+    SELECT
+    u.user_id, u.username, u.email, u.password_hash, r.role_name
     FROM User u
     JOIN Role r ON u.role_id = r.role_id
-    WHERE u.username = %s AND u.password_hash = %s
+    WHERE u.username = %s
     """
 
-    cursor.execute(login_sql, (username, password))
+    cursor.execute(login_sql, (username,))
 
     user = cursor.fetchone()
 
     cursor.close()
     conn.close()
 
-    if not user:
+    if not user or not bcrypt.checkpw(password.encode('utf-8'), user['password_hash'].encode('utf-8')):
         return {"message": "Invalid username or password"}
-    else:
-        return {"message": "Login successful!", "user": user}
+
+    del user['password_hash']
+    return {"message": "Login successful!", "user": user}
 
 
 @app.get("/chefs")
@@ -158,17 +159,24 @@ def get_chefs():
 
 @app.put("/chefs/{chef_id}/profile")
 def update_chef_profile(
-    chef_id: int, 
-    bio: str = None, 
+    chef_id: int,
+    user_id: int,
+    bio: str = None,
     specialty: str = None
     ):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
+    cursor.execute("SELECT chef_id FROM Chef WHERE chef_id = %s AND user_id = %s", (chef_id, user_id))
+    if not cursor.fetchone():
+        cursor.close()
+        conn.close()
+        return {"error": "Unauthorized: you do not own this chef profile"}
+
     sql = """
-    UPDATE Chef 
+    UPDATE Chef
     SET bio = %s,
-        specialty = %s 
+        specialty = %s
     WHERE chef_id = %s
     """
 
@@ -177,17 +185,24 @@ def update_chef_profile(
 
     cursor.close()
     conn.close()
-    return {"message": "Chef profile updated successfully!"} 
+    return {"message": "Chef profile updated successfully!"}
 
 @app.post("/chefs/{chef_id}/availability")
 def add_chef_availability(
     chef_id: int,
+    user_id: int,
     day_of_week: str,
     start_time: str,
     end_time: str
 ):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT chef_id FROM Chef WHERE chef_id = %s AND user_id = %s", (chef_id, user_id))
+    if not cursor.fetchone():
+        cursor.close()
+        conn.close()
+        return {"error": "Unauthorized: you do not own this chef profile"}
 
     check_sql = """
     SELECT *
@@ -290,7 +305,7 @@ def create_booking(
     return {"message": "Booking created successfully!", "booking_id": booking_id, "status": "pending"}
 
 @app.put("/bookings/{booking_id}/status")
-def update_booking_status(booking_id: int, status: str):
+def update_booking_status(booking_id: int, status: str, user_id: int):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -301,8 +316,29 @@ def update_booking_status(booking_id: int, status: str):
         conn.close()
         return {"message": "Invalid status. Please choose from: pending, accepted, declined, cancelled, completed"}
 
+    if status == "cancelled":
+        cursor.execute(
+            "SELECT booking_id FROM Booking WHERE booking_id = %s AND user_id = %s",
+            (booking_id, user_id)
+        )
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return {"error": "Unauthorized: you cannot cancel this booking"}
+    else:
+        cursor.execute(
+            """SELECT b.booking_id FROM Booking b
+               JOIN Chef c ON b.chef_id = c.chef_id
+               WHERE b.booking_id = %s AND c.user_id = %s""",
+            (booking_id, user_id)
+        )
+        if not cursor.fetchone():
+            cursor.close()
+            conn.close()
+            return {"error": "Unauthorized: you are not the chef for this booking"}
+
     sql = """
-    UPDATE Booking 
+    UPDATE Booking
     SET status = %s
     WHERE booking_id = %s
     """
@@ -502,7 +538,7 @@ def create_membership_plan(
 def add_chef_membership(
     chef_id: int,
     plan_id: int,
-    memmbership_type: str = None,
+    membership_type: str = None,
     start_date: str = None,
     end_date: str = None
 ):
@@ -515,7 +551,7 @@ def add_chef_membership(
     VALUES (%s, %s, %s, %s, %s)
     """
 
-    cursor.execute(sql, (chef_id, plan_id, memmbership_type, start_date, end_date))
+    cursor.execute(sql, (chef_id, plan_id, membership_type, start_date, end_date))
     conn.commit()
 
     cursor.close()
@@ -568,7 +604,7 @@ def search_chefs(
         params.append(min_rating)
 
     if day_of_week:
-        sql += "AND ChefAvailability.day_of_week = %s"
+        sql += " AND ChefAvailability.day_of_week = %s"
         params.append(day_of_week)
 
     sql += " ORDER BY ranking_score DESC"

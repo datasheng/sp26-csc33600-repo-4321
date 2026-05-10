@@ -89,7 +89,23 @@ export default function DashboardPage( { user }) {
     fetch(`http://localhost:8000/users/${user.user_id}/bookings`)
       .then(r => r.json())
       .then(data => {
-        setBookings(Array.isArray(data) ? data : (data.bookings ?? []));
+        const raw = Array.isArray(data) ? data : (data.bookings ?? []);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const normalized = raw.map(b => ({
+          id:       b.booking_id,
+          chefId:   b.chef_id,
+          chef:     b.chef_name,
+          date:     b.booking_date,
+          time:     b.booking_time,
+          status:   b.status,
+          upcoming: new Date(b.booking_date) >= today && b.status !== 'cancelled',
+          emoji:    '🧑‍🍳',
+          cuisine:  b.customer_requests ?? '',
+          amount:   0,
+          reviewed: false,
+        }));
+        setBookings(normalized);
         setLoading(false);
       })
       .catch(() => {
@@ -113,10 +129,21 @@ export default function DashboardPage( { user }) {
   /* ── Handlers ── */
 
   function handleCancel(id) {
-    setBookings(prev =>
-      prev.map(b => b.id === id ? { ...b, status: 'cancelled', upcoming: false } : b)
-    );
-    setToast('Booking cancelled.');
+    fetch(`http://localhost:8000/bookings/${id}/status?status=cancelled&user_id=${user.user_id}`, {
+      method: 'PUT',
+    })
+      .then(r => r.json())
+      .then(data => {
+        if (data.error) {
+          setToast(data.error);
+          return;
+        }
+        setBookings(prev =>
+          prev.map(b => b.id === id ? { ...b, status: 'cancelled', upcoming: false } : b)
+        );
+        setToast('Booking cancelled.');
+      })
+      .catch(() => setToast('Could not cancel booking. Please try again.'));
   }
 
   function handleReschedule() {
