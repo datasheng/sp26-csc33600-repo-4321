@@ -4,67 +4,23 @@ import StatusBadge from '../components/StatusBadge';
 import { CHEFS } from '../data/chefs';
 import styles from './DashboardPage.module.css';
 
-const BASE_URL = 'http://localhost:8000';
+/* ──────────────────────────────────────────────────────────────
+ * Module-scope mock data
+ * Replace with API responses once the backend is wired up.
+ * ────────────────────────────────────────────────────────────── */
 
-/* ── Static chef supplement for emoji + cuisine display ─────── */
-const CHEF_META = {
-  1: { emoji: '👩🏾‍🍳', cuisine: 'West African' },
-  2: { emoji: '👨🏻‍🍳', cuisine: 'Italian' },
-  3: { emoji: '👩🏽‍🍳', cuisine: 'Indian' },
-  4: { emoji: '👨🏿‍🍳', cuisine: 'Ghanaian' },
-  5: { emoji: '👩🏻‍🍳', cuisine: 'Japanese' },
-  6: { emoji: '👨🏽‍🍳', cuisine: 'Mexican' },
+const USER = {
+  name:     'David M.',
+  initials: 'DM',
+  email:    'david.m@example.com',
 };
 
-/* ── Convert username to display name ───────────────────────── */
-function toDisplayName(username) {
-  if (!username) return 'Chef';
-  return username
-    .split('_')
-    .map(w => w.charAt(0).toUpperCase() + w.slice(1))
-    .join(' ');
-}
-
-/* ── Format date "2026-05-10" → "May 10, 2026" ─────────────── */
-function formatDate(dateStr) {
-  if (!dateStr) return '—';
-  const d = new Date(dateStr + 'T00:00:00');
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-}
-
-/* ── Format time "18:30:00" → "6:30 PM" ────────────────────── */
-function formatTime(timeStr) {
-  if (!timeStr) return '—';
-  const [h, m] = timeStr.split(':').map(Number);
-  const period = h >= 12 ? 'PM' : 'AM';
-  const hour   = h % 12 || 12;
-  return `${hour}:${String(m).padStart(2, '0')} ${period}`;
-}
-
-/* ── Map API booking to component shape ─────────────────────── */
-function mapBooking(b) {
-  const meta     = CHEF_META[b.chef_id] ?? { emoji: '🧑‍🍳', cuisine: 'Various' };
-  const dateStr  = b.booking_date?.split?.('T')?.[0] ?? b.booking_date;
-  const isUpcoming = new Date(dateStr) >= new Date(new Date().toDateString());
-
-  return {
-    id:       b.booking_id,
-    chefId:   b.chef_id,
-    emoji:    meta.emoji,
-    chef:     toDisplayName(b.chef_name),
-    cuisine:  meta.cuisine,
-    date:     formatDate(dateStr),
-    time:     formatTime(b.booking_time),
-    amount:   b.amount ?? 0,
-    status:   b.status,
-    upcoming: isUpcoming && b.status !== 'cancelled' && b.status !== 'completed',
-    reviewed: false,
-  };
-}
-
-/* ──────────────────────────────────────────────────────────────
- * Static data (kept for non-backend sections)
- * ────────────────────────────────────────────────────────────── */
+const STATS = [
+  { label: 'Total Bookings', value: '7',      sub: '↑ 2 this month' },
+  { label: 'Total Spent',    value: '$1,240', sub: '↑ $198.50 pending' },
+  { label: 'Reviews Left',   value: '5',      sub: '2 awaiting review' },
+  { label: 'Saved Chefs',    value: '3',      sub: '' },
+];
 
 const NAV_ITEMS = [
   { icon: '🏠',   label: 'Dashboard' },
@@ -113,56 +69,33 @@ function money(n) { return `$${Number(n ?? 0).toFixed(2)}`; }
  * ────────────────────────────────────────────────────────────── */
 
 export default function DashboardPage() {
-  const navigate = useNavigate();
+  const [activeNav,       setActiveNav]      = useState('Dashboard');
 
-  // Read logged-in user from localStorage
-  const [currentUser] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('cc_user')) ?? null;
-    } catch {
-      return null;
-    }
-  });
+  // Data state — would come from API
+  const [bookings,        setBookings]       = useState([]);
+  const [savedChefs,      setSavedChefs]     = useState([]);
+  const [reviews,         setReviews]        = useState(SEED_REVIEWS);
+  const [paymentMethods,  setPaymentMethods] = useState(SEED_PAYMENT_METHODS);
+  const [pantry,          setPantry]         = useState(SEED_PANTRY);
+  const [notifs,          setNotifs]         = useState(SEED_NOTIFS);
 
-  const [activeNav,      setActiveNav]      = useState('Dashboard');
-  const [bookings,       setBookings]       = useState([]);
-  const [savedChefs,     setSavedChefs]     = useState([]);
-  const [reviews,        setReviews]        = useState(SEED_REVIEWS);
-  const [paymentMethods, setPaymentMethods] = useState(SEED_PAYMENT_METHODS);
-  const [pantry,         setPantry]         = useState(SEED_PANTRY);
-  const [notifs,         setNotifs]         = useState(SEED_NOTIFS);
-  const [loading,        setLoading]        = useState(true);
-  const [error,          setError]          = useState('');
-  const [toast,          setToast]          = useState('');
-  const [reviewModal,    setReviewModal]    = useState(null);
+  // UI state
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState('');
+  const [toast,       setToast]       = useState('');
+  const [reviewModal, setReviewModal] = useState(null);
 
-  // Redirect to login if not logged in
+  /* Initial mock fetch */
   useEffect(() => {
-    if (!currentUser) {
-      navigate('/login');
-    }
-  }, [currentUser, navigate]);
-
-  // Fetch real bookings from backend
-  useEffect(() => {
-    if (!currentUser) return;
-
     setLoading(true);
     setError('');
-
-    fetch(`${BASE_URL}/users/${currentUser.user_id}/bookings`)
-      .then(r => r.ok ? r.json() : Promise.reject(r))
-      .then(data => {
-        const list = Array.isArray(data) ? data : (data.bookings ?? []);
-        setBookings(list.map(mapBooking));
-        setSavedChefs(CHEFS.filter(c => SAVED_CHEF_IDS.includes(c.id)));
-        setLoading(false);
-      })
-      .catch(() => {
-        setError('Could not load your bookings.');
-        setLoading(false);
-      });
-  }, [currentUser]);
+    const t = setTimeout(() => {
+      setBookings(SEED_BOOKINGS);
+      setSavedChefs(CHEFS.filter(c => SAVED_CHEF_IDS.includes(c.id)));
+      setLoading(false);
+    }, 250);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
@@ -195,7 +128,7 @@ export default function DashboardPage() {
     { label: 'Saved Chefs',    value: String(savedChefs.length), sub: '' },
   ];
 
-  /* ── Handlers ──────────────────────────────────────────── */
+  /* ── Handlers ── */
 
   function handleCancel(id) {
     setBookings(prev =>
@@ -228,9 +161,7 @@ export default function DashboardPage() {
       bookingDate,
     };
     setReviews(prev => [newReview, ...prev]);
-    setBookings(prev =>
-      prev.map(b => b.id === bookingId ? { ...b, reviewed: true } : b)
-    );
+    setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, reviewed: true } : b));
     setReviewModal(null);
     setToast('Review submitted. Thanks!');
   }
@@ -266,18 +197,27 @@ export default function DashboardPage() {
     });
   }
 
-  function setStaples(val) { setPantry(prev => ({ ...prev, staples: val })); }
-  function savePantry()    { setToast('Pantry profile saved.'); }
-  function toggleNotif(key) { setNotifs(prev => ({ ...prev, [key]: !prev[key] })); }
-  function saveSettings()  { setToast('Notification preferences saved.'); }
-  function notImplemented() { setToast('This will be available once the backend is connected.'); }
-
-  function handleLogout() {
-    localStorage.removeItem('cc_user');
-    navigate('/login');
+  function setStaples(val) {
+    setPantry(prev => ({ ...prev, staples: val }));
   }
 
-  /* ── Panel router ──────────────────────────────────────── */
+  function savePantry() {
+    setToast('Pantry profile saved.');
+  }
+
+  function toggleNotif(key) {
+    setNotifs(prev => ({ ...prev, [key]: !prev[key] }));
+  }
+
+  function saveSettings() {
+    setToast('Notification preferences saved.');
+  }
+
+  function notImplemented() {
+    setToast('This will be available once the backend is connected.');
+  }
+
+  /* ── Panel router ── */
 
   function renderPanel() {
     if (loading) return <PanelLoader />;
@@ -295,20 +235,33 @@ export default function DashboardPage() {
       case 'Payments':
         return <PaymentsPanel paymentMethods={paymentMethods} transactions={bookings} onRemoveCard={handleRemoveCard} onMakeDefault={handleMakeDefault} onAddCard={handleAddCard} />;
       case 'Settings':
-        return <SettingsPanel notifs={notifs} toggleNotif={toggleNotif} onSave={saveSettings} onEditField={notImplemented} user={{ name: displayName, email: currentUser?.email ?? '' }} />;
+        return (
+          <SettingsPanel
+            notifs={notifs}
+            toggleNotif={toggleNotif}
+            onSave={saveSettings}
+            onEditField={notImplemented}
+          />
+        );
       case 'Dashboard':
       default:
-        return <OverviewPanel bookings={bookings} stats={STATS} displayName={displayName} onCancel={handleCancel} onReschedule={handleReschedule} onLeaveReview={handleOpenReview} />;
+        return (
+          <OverviewPanel
+            bookings={bookings}
+            onCancel={handleCancel}
+            onReschedule={handleReschedule}
+            onLeaveReview={handleOpenReview}
+          />
+        );
     }
   }
 
   return (
     <main className={styles.page}>
-      {/* Sidebar */}
       <aside className={styles.sidebar}>
         <div className={styles.sidebarUser}>
-          <div className={styles.sidebarAvatar}>{initials}</div>
-          <strong>{displayName}</strong>
+          <div className={styles.sidebarAvatar}>{USER.initials}</div>
+          <strong>{USER.name}</strong>
           <small>Customer Account</small>
           <button
             onClick={handleLogout}
@@ -317,7 +270,6 @@ export default function DashboardPage() {
             Log out
           </button>
         </div>
-
         <nav className={styles.sidebarNav}>
           {NAV_ITEMS.map(item => (
             <button
@@ -334,9 +286,11 @@ export default function DashboardPage() {
       </aside>
 
       {/* Main panel */}
-      <div className={styles.main}>{renderPanel()}</div>
+      <div className={styles.main}>
+        {renderPanel()}
+      </div>
 
-      {/* Review modal */}
+      {/* Review modal — overlays the whole dashboard */}
       {reviewModal && (
         <ReviewModal
           chefName={reviewModal.chefName}
@@ -356,7 +310,7 @@ export default function DashboardPage() {
  * Panels
  * ────────────────────────────────────────────────────────────── */
 
-function OverviewPanel({ bookings, stats, displayName, onCancel, onReschedule, onLeaveReview }) {
+function OverviewPanel({ bookings, onCancel, onReschedule, onLeaveReview }) {
   const upcoming = bookings.filter(b => b.upcoming);
   const past     = bookings.filter(b => !b.upcoming);
   const hour     = new Date().getHours();
@@ -365,8 +319,8 @@ function OverviewPanel({ bookings, stats, displayName, onCancel, onReschedule, o
   return (
     <>
       <div className={styles.greeting}>
-        <h1>{greeting}, {displayName.split(' ')[0]} 👋</h1>
-        <p>Here's a summary of your ChefConnect activity.</p>
+        <h1>Good evening, {USER.name.split(' ')[0]} 👋</h1>
+        <p>Here’s a summary of your ChefConnect activity.</p>
       </div>
 
       <div className={styles.statsGrid}>
@@ -382,7 +336,14 @@ function OverviewPanel({ bookings, stats, displayName, onCancel, onReschedule, o
       <SectionHeader label="Upcoming bookings" count={upcoming.length} />
       {upcoming.length === 0 ? <EmptyBookings /> : (
         <div className={styles.bookingList}>
-          {upcoming.map(b => <UpcomingBookingCard key={b.id} booking={b} onCancel={onCancel} onReschedule={onReschedule} />)}
+          {upcoming.map(b => (
+            <UpcomingBookingCard
+              key={b.id}
+              booking={b}
+              onCancel={onCancel}
+              onReschedule={onReschedule}
+            />
+          ))}
         </div>
       )}
 
@@ -433,9 +394,19 @@ function BookingsPanel({ bookings, onCancel, onReschedule, onLeaveReview }) {
       </div>
       {filtered.length === 0 ? <EmptyBookings /> : (
         <div className={styles.bookingList}>
-          {filtered.map(b => b.upcoming
-            ? <UpcomingBookingCard key={b.id} booking={b} onCancel={onCancel} onReschedule={onReschedule} />
-            : <PastBookingCard key={b.id} booking={b} onLeaveReview={onLeaveReview} />
+          {filtered.map(b =>
+            b.upcoming
+              ? <UpcomingBookingCard
+                  key={b.id}
+                  booking={b}
+                  onCancel={onCancel}
+                  onReschedule={onReschedule}
+                />
+              : <PastBookingCard
+                  key={b.id}
+                  booking={b}
+                  onLeaveReview={onLeaveReview}
+                />
           )}
         </div>
       )}
@@ -460,7 +431,14 @@ function SavedChefsPanel({ savedChefs, onRemoveSaved }) {
               <div className={styles.savedImg}>
                 <span className={styles.savedEmoji}>{c.emoji}</span>
                 {c.badge && <span className={styles.savedBadge}>{c.badge}</span>}
-                <button className={styles.savedRemoveBtn} onClick={() => onRemoveSaved(c.id)} aria-label={`Remove ${c.name}`}>×</button>
+                <button
+                  className={styles.savedRemoveBtn}
+                  onClick={() => onRemoveSaved(c.id)}
+                  aria-label={`Remove ${c.name} from saved`}
+                  title="Remove from saved"
+                >
+                  ×
+                </button>
               </div>
               <div className={styles.savedBody}>
                 <strong>{c.name}</strong>
@@ -493,7 +471,16 @@ function PantryPanel({ pantry, togglePantry, setStaples, onSave }) {
         <PantryChipGroup label="Kitchen equipment" options={EQUIPMENT_OPTIONS} selected={pantry.equipment} onToggle={v => togglePantry('equipment', v)} />
         <div className={styles.formGroup}>
           <label htmlFor="pantry-staples" className={styles.formLabel}>Pantry staples</label>
-          <textarea id="pantry-staples" className={styles.formTextarea} value={pantry.staples} onChange={e => setStaples(e.target.value)} placeholder="Onions, garlic, olive oil, eggs…" />
+          <p className={styles.formHelp}>
+            Comma-separated. Helps Pantry Chefs plan a meal around what you already have.
+          </p>
+          <textarea
+            id="pantry-staples"
+            className={styles.formTextarea}
+            value={pantry.staples}
+            onChange={e => setStaples(e.target.value)}
+            placeholder="Onions, garlic, olive oil, eggs…"
+          />
         </div>
         <div className={styles.formActions}>
           <button className={styles.savePrimary} onClick={onSave}>Save changes</button>
@@ -507,10 +494,16 @@ function ReviewsPanel({ bookings, reviews, onLeaveReview, onDeleteReview }) {
   const awaiting = bookings.filter(b => b.status === 'completed' && !b.reviewed);
   return (
     <>
-      <PanelHeader title="My Reviews" sub="Reviews you've written and bookings waiting for feedback." />
+      <PanelHeader
+        title="My Reviews"
+        sub="Reviews you’ve written and bookings still waiting for your feedback."
+      />
+
       <SectionHeader label="Awaiting your review" count={awaiting.length} />
       {awaiting.length === 0 ? (
-        <div className={styles.emptyBox}><p className={styles.emptyText}>You're all caught up.</p></div>
+        <div className={styles.emptyBox}>
+          <p className={styles.emptyText}>You’re all caught up — nothing waiting for review.</p>
+        </div>
       ) : (
         <div className={styles.bookingList}>
           {awaiting.map(b => (
@@ -523,6 +516,9 @@ function ReviewsPanel({ bookings, reviews, onLeaveReview, onDeleteReview }) {
                 <div className={styles.dateBlock}>
                   <span className={styles.dateMain}>{b.date}</span>
                   <span className={styles.dateSub}>{b.time}</span>
+                </div>
+                <div className={styles.amountBlock}>
+                  <span className={styles.amountMain}>{money(b.amount)}</span>
                 </div>
               </div>
               <div className={styles.cardActions}>
@@ -562,18 +558,37 @@ function ReviewsPanel({ bookings, reviews, onLeaveReview, onDeleteReview }) {
 function PaymentsPanel({ paymentMethods, transactions, onRemoveCard, onMakeDefault, onAddCard }) {
   return (
     <>
-      <PanelHeader title="Payments" sub="Manage your saved cards and transaction history." />
+      <PanelHeader
+        title="Payments"
+        sub="Manage your saved cards and review your transaction history."
+      />
+
       <SectionHeader label="Payment methods" count={paymentMethods.length} />
       <div className={styles.cardsList}>
         {paymentMethods.map(p => (
           <div key={p.id} className={styles.payCard}>
             <div className={styles.payCardLeft}>
-              <div className={styles.payCardChip}>💳</div>
-              <div><strong>{p.brand} •••• {p.last4}</strong><small>Expires {p.exp}</small></div>
+              <div className={styles.payCardChip} aria-hidden="true">💳</div>
+              <div>
+                <strong>{p.brand} •••• {p.last4}</strong>
+                <small>Expires {p.exp}</small>
+              </div>
             </div>
             <div className={styles.payCardRight}>
-              {p.isDefault ? <span className={styles.defaultBadge}>Default</span> : <button className={styles.linkBtn} onClick={() => onMakeDefault(p.id)}>Make default</button>}
-              <button className={styles.removeBtn} onClick={() => onRemoveCard(p.id)}>×</button>
+              {p.isDefault ? (
+                <span className={styles.defaultBadge}>Default</span>
+              ) : (
+                <button className={styles.linkBtn} onClick={() => onMakeDefault(p.id)}>
+                  Make default
+                </button>
+              )}
+              <button
+                className={styles.removeBtn}
+                onClick={() => onRemoveCard(p.id)}
+                aria-label="Remove card"
+              >
+                ×
+              </button>
             </div>
           </div>
         ))}
@@ -604,18 +619,24 @@ function PaymentsPanel({ paymentMethods, transactions, onRemoveCard, onMakeDefau
   );
 }
 
-function SettingsPanel({ notifs, toggleNotif, onSave, onEditField, user }) {
+function SettingsPanel({ notifs, toggleNotif, onSave, onEditField }) {
   return (
     <>
       <PanelHeader title="Settings" sub="Manage your account and how we get in touch." />
       <div className={styles.formCard}>
         <h3 className={styles.formCardTitle}>Account</h3>
         <div className={styles.settingsRow}>
-          <div><span className={styles.settingsRowLabel}>Name</span><span className={styles.settingsRowValue}>{user.name}</span></div>
+          <div>
+            <span className={styles.settingsRowLabel}>Name</span>
+            <span className={styles.settingsRowValue}>{USER.name}</span>
+          </div>
           <button className={styles.linkBtn} onClick={onEditField}>Edit</button>
         </div>
         <div className={styles.settingsRow}>
-          <div><span className={styles.settingsRowLabel}>Email</span><span className={styles.settingsRowValue}>{user.email}</span></div>
+          <div>
+            <span className={styles.settingsRowLabel}>Email</span>
+            <span className={styles.settingsRowValue}>{USER.email}</span>
+          </div>
           <button className={styles.linkBtn} onClick={onEditField}>Edit</button>
         </div>
         <div className={styles.settingsRow}>
@@ -634,8 +655,13 @@ function SettingsPanel({ notifs, toggleNotif, onSave, onEditField, user }) {
       </div>
       <div className={`${styles.formCard} ${styles.dangerCard}`}>
         <h3 className={styles.formCardTitle}>Danger zone</h3>
-        <p className={styles.dangerText}>Permanently delete your account and all associated data.</p>
-        <button className={styles.dangerBtn} onClick={onEditField}>Delete my account</button>
+        <p className={styles.dangerText}>
+          Permanently delete your account and all associated data.
+          This cannot be undone.
+        </p>
+        <button className={styles.dangerBtn} onClick={onEditField}>
+          Delete my account
+        </button>
       </div>
     </>
   );
@@ -730,8 +756,18 @@ function StarsDisplay({ rating }) {
 function ToggleRow({ label, desc, checked, onChange }) {
   return (
     <div className={styles.toggleRow}>
-      <div><span className={styles.toggleLabel}>{label}</span><span className={styles.toggleDesc}>{desc}</span></div>
-      <button type="button" className={`${styles.toggle} ${checked ? styles.toggleOn : ''}`} role="switch" aria-checked={checked} onClick={onChange}>
+      <div>
+        <span className={styles.toggleLabel}>{label}</span>
+        <span className={styles.toggleDesc}>{desc}</span>
+      </div>
+      <button
+        type="button"
+        className={`${styles.toggle} ${checked ? styles.toggleOn : ''}`}
+        role="switch"
+        aria-checked={checked}
+        aria-label={label}
+        onClick={onChange}
+      >
         <span className={styles.toggleKnob} />
       </button>
     </div>
@@ -764,11 +800,22 @@ function ReviewModal({ chefName, chefEmoji, bookingDate, onClose, onSubmit }) {
 
   function submit() {
     setError('');
-    if (rating === 0) { setError('Please choose a star rating.'); return; }
-    if (comment.trim().length < 10) { setError('Please write at least 10 characters.'); return; }
+    if (rating === 0) {
+      setError('Please choose a star rating.');
+      return;
+    }
+    if (comment.trim().length < 10) {
+      setError('Please write at least 10 characters about your experience.');
+      return;
+    }
     onSubmit({ rating, comment: comment.trim() });
   }
 
+  function handleKey(e) {
+    if (e.key === 'Escape') onClose();
+  }
+
+  // Lock body scroll while modal is open
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -781,8 +828,21 @@ function ReviewModal({ chefName, chefEmoji, bookingDate, onClose, onSubmit }) {
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div className={styles.modalCard} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true">
-        <button className={styles.modalClose} onClick={onClose}>×</button>
+      <div
+        className={styles.modalCard}
+        onClick={e => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Leave a review for ${chefName}`}
+      >
+        <button
+          className={styles.modalClose}
+          onClick={onClose}
+          aria-label="Close"
+        >
+          ×
+        </button>
+
         <span className={styles.modalEyebrow}>Leave a review</span>
         <div className={styles.modalChef}>
           <div className={styles.modalChefAvatar}>{chefEmoji}</div>
@@ -791,15 +851,32 @@ function ReviewModal({ chefName, chefEmoji, bookingDate, onClose, onSubmit }) {
         <div className={styles.modalGroup}>
           <label className={styles.modalLabel}>Your rating</label>
           <div className={styles.starInput}>
-            {[1,2,3,4,5].map(n => (
-              <button key={n} type="button" className={`${styles.starBtn} ${ratingShown >= n ? styles.starBtnFilled : ''}`} onClick={() => setRating(n)} onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(0)}>★</button>
+            {[1, 2, 3, 4, 5].map(n => (
+              <button
+                key={n}
+                type="button"
+                className={`${styles.starBtn} ${ratingShown >= n ? styles.starBtnFilled : ''}`}
+                onClick={() => setRating(n)}
+                onMouseEnter={() => setHover(n)}
+                onMouseLeave={() => setHover(0)}
+                aria-label={`${n} star${n > 1 ? 's' : ''}`}
+              >
+                ★
+              </button>
             ))}
             <span className={styles.starInputLabel}>{RATING_LABELS[ratingShown]}</span>
           </div>
         </div>
         <div className={styles.modalGroup}>
           <label htmlFor="rev-comment" className={styles.modalLabel}>Your review</label>
-          <textarea id="rev-comment" className={styles.modalTextarea} placeholder="What was the food like? Would you book again?" value={comment} onChange={e => setComment(e.target.value)} rows={5} />
+          <textarea
+            id="rev-comment"
+            className={styles.modalTextarea}
+            placeholder="What was the food like? How was the chef? Would you book them again?"
+            value={comment}
+            onChange={e => setComment(e.target.value)}
+            rows={5}
+          />
           <small className={styles.modalCounter}>{comment.length} characters</small>
         </div>
         {error && <div className={styles.modalError} role="alert">{error}</div>}

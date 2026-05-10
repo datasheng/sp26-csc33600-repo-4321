@@ -8,7 +8,7 @@ export default function SignupPage() {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    name: '',
+    username: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -21,8 +21,8 @@ export default function SignupPage() {
   }
 
   function validate() {
-    if (!form.name.trim())              return 'Please enter your full name.';
-    if (form.name.trim().length < 2)    return 'Please enter a valid name.';
+    if (!form.username.trim())          return 'Please enter a username.';
+    if (form.username.trim().length < 2) return 'Username must be at least 2 characters.';
     if (!form.email.trim())             return 'Please enter your email.';
     if (!EMAIL_RE.test(form.email))     return 'Please enter a valid email address.';
     if (!form.password)                 return 'Please choose a password.';
@@ -32,28 +32,38 @@ export default function SignupPage() {
     return '';
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     setError('');
 
     const msg = validate();
-    if (msg) {
-      setError(msg);
-      return;
-    }
+    if (msg) { setError(msg); return; }
 
-    /* ── Backend stub ──────────────────────────────────────────
-     * Replace with real fetch when API is ready:
-     *
-     *   const res = await fetch('/api/auth/signup', {...});
-     *   if (!res.ok) setError('That email is already in use.');
-     *   else navigate('/dashboard');
-     * ──────────────────────────────────────────────────────── */
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
+      const res = await fetch(
+        `http://localhost:8000/register?username=${encodeURIComponent(form.username)}&email=${encodeURIComponent(form.email)}&password_hash=${encodeURIComponent(form.password)}&role=customer`,
+        { method: 'POST' }
+      );
+
+      if (!res.ok) {
+        const err = await res.json();
+        setError(err.detail || 'Sign up failed. That username or email may already be in use.');
+        return;
+      }
+
+      const data = await res.json();
+      localStorage.setItem('user_id',  data.user_id);
+      localStorage.setItem('username', form.username);
+      localStorage.setItem('email',    form.email);
+      localStorage.setItem('role',     'customer');
       navigate('/dashboard');
-    }, 600);
+
+    } catch (err) {
+      setError('Could not connect to server. Is the backend running?');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -63,16 +73,14 @@ export default function SignupPage() {
         <Link to="/" className={styles.brandLogo}>
           Chef<span>Connect</span>
         </Link>
-
         <div className={styles.brandQuote}>
           <p className={styles.quoteText}>
-            Your kitchen.<br/>
-            Their craft.<br/>
+            Your kitchen.<br />
+            Their craft.<br />
             <em>Your table.</em>
           </p>
           <span className={styles.quoteAuthor}>— Welcome to ChefConnect</span>
         </div>
-
         <ul className={styles.benefits}>
           <li><span>✓</span> Book certified local chefs in minutes</li>
           <li><span>✓</span> Save the chefs you love for next time</li>
@@ -99,14 +107,14 @@ export default function SignupPage() {
 
           <form onSubmit={handleSubmit} noValidate>
             <div className={styles.group}>
-              <label htmlFor="signup-name">Full Name</label>
+              <label htmlFor="signup-username">Username</label>
               <input
-                id="signup-name"
-                name="name"
+                id="signup-username"
+                name="username"
                 type="text"
-                autoComplete="name"
-                placeholder="Anika Osei"
-                value={form.name}
+                autoComplete="username"
+                placeholder="e.g. marcus_t"
+                value={form.username}
                 onChange={handleChange}
               />
             </div>
@@ -161,7 +169,8 @@ export default function SignupPage() {
 
           <p className={styles.legalNote}>
             By signing up you agree to our Terms and Privacy Policy.
-            Looking to cook for others? <Link to="/register" className={styles.inlineLink}>Become a chef</Link>.
+            Looking to cook for others?{' '}
+            <Link to="/register" className={styles.inlineLink}>Become a chef</Link>.
           </p>
         </div>
       </section>

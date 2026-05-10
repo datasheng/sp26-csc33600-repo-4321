@@ -2,8 +2,6 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styles from './LoginPage.module.css';
 
-const BASE_URL = 'http://localhost:8000';
-
 export default function LoginPage() {
   const navigate = useNavigate();
 
@@ -29,29 +27,26 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const res = await fetch(
-        `${BASE_URL}/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
+        `http://localhost:8000/login?username=${encodeURIComponent(username)}&password=${encodeURIComponent(password)}`,
         { method: 'POST' }
       );
 
-      const data = await res.json();
-
-      if (!data.user) {
-        setError(data.message ?? 'Invalid username or password.');
-        setLoading(false);
+      if (!res.ok) {
+        const err = await res.json();
+        setError(err.detail || 'Invalid username or password.');
         return;
       }
 
-      // Save logged-in user to localStorage so Dashboard can read it
-      localStorage.setItem('cc_user', JSON.stringify({
-        user_id:   data.user.user_id,
-        username:  data.user.username,
-        email:     data.user.email,
-        role_name: data.user.role_name,
-      }));
-
+      const data = await res.json();
+      localStorage.setItem('user_id',  data.user_id);
+      localStorage.setItem('username', data.username);
+      localStorage.setItem('email',    data.email ?? '');
+      localStorage.setItem('role',     data.role ?? 'customer');
       navigate('/dashboard');
+
     } catch (err) {
-      setError('Could not connect to the server. Make sure the backend is running.');
+      setError('Could not connect to server. Is the backend running?');
+    } finally {
       setLoading(false);
     }
   }
@@ -63,14 +58,12 @@ export default function LoginPage() {
         <Link to="/" className={styles.brandLogo}>
           Chef<span>Connect</span>
         </Link>
-
         <div className={styles.brandQuote}>
           <p className={styles.quoteText}>
             "The kitchen is where I find my grandmother again."
           </p>
           <span className={styles.quoteAuthor}>— Anika, ChefConnect chef</span>
         </div>
-
         <p className={styles.brandFoot}>
           Sign in to manage your bookings, save favourite chefs, and
           get back to the table.

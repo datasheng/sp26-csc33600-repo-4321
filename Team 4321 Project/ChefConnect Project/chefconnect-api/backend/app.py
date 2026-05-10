@@ -218,6 +218,27 @@ def add_chef_availability(
     conn.close()
     return {"message": "Chef availability added successfully!"} 
 
+@app.get("/chefs/{chef_id}/availability")
+def get_chef_availability(chef_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    sql = """
+    SELECT availability_id, chef_id, day_of_week, start_time, end_time
+    FROM ChefAvailability
+    WHERE chef_id = %s
+    ORDER BY FIELD(day_of_week, 
+        'Monday','Tuesday','Wednesday',
+        'Thursday','Friday','Saturday','Sunday')
+    """
+
+    cursor.execute(sql, (chef_id,))
+    availability = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+    return {"availability": availability}
+
 @app.post("/bookings")
 def create_booking(
     chef_id: int,
