@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import styles from './LoginPage.module.css';
 
-export default function LoginPage() {
+export default function LoginPage({ onLogin }) {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState('');
@@ -38,10 +38,16 @@ export default function LoginPage() {
       }
 
       const data = await res.json();
-      localStorage.setItem('user_id',  data.user_id);
-      localStorage.setItem('username', data.username);
-      localStorage.setItem('email',    data.email ?? '');
-      localStorage.setItem('role',     data.role ?? 'customer');
+      if (data.message !== 'Login successful!') {
+       setError('Invalid username or password.');
+       return;
+     }
+      onLogin({
+        user_id:  data.user.user_id,
+        username: data.user.username,
+        email:    data.user.email,
+        role:     data.user.role_name,
+    });
       navigate('/dashboard');
 
     } catch (err) {

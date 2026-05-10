@@ -4,23 +4,7 @@ import StatusBadge from '../components/StatusBadge';
 import { CHEFS } from '../data/chefs';
 import styles from './DashboardPage.module.css';
 
-/* ──────────────────────────────────────────────────────────────
- * Module-scope mock data
- * Replace with API responses once the backend is wired up.
- * ────────────────────────────────────────────────────────────── */
 
-const USER = {
-  name:     'David M.',
-  initials: 'DM',
-  email:    'david.m@example.com',
-};
-
-const STATS = [
-  { label: 'Total Bookings', value: '7',      sub: '↑ 2 this month' },
-  { label: 'Total Spent',    value: '$1,240', sub: '↑ $198.50 pending' },
-  { label: 'Reviews Left',   value: '5',      sub: '2 awaiting review' },
-  { label: 'Saved Chefs',    value: '3',      sub: '' },
-];
 
 const NAV_ITEMS = [
   { icon: '🏠',   label: 'Dashboard' },
@@ -34,7 +18,19 @@ const NAV_ITEMS = [
 
 const SAVED_CHEF_IDS = [1, 2, 4];
 
-const SEED_REVIEWS = [];
+const SEED_REVIEWS = [
+  {
+    id: 'r1',
+    bookingId: 3,
+    chefId: 3,
+    chefName: 'Priya Nair',
+    chefEmoji: '👩🏽‍🍳',
+    rating: 5,
+    comment: "The Kerala fish curry was perfect — properly spiced, properly thickened. We requested vegan substitutions for half the table and Priya nailed both versions. Will absolutely book again.",
+    dateWritten: 'Apr 16, 2026',
+    bookingDate: 'Apr 15, 2026',
+  },
+];
 
 const SEED_PAYMENT_METHODS = [
   { id: 'pm1', brand: 'Visa',       last4: '4242', exp: '04/27', isDefault: true  },
@@ -62,22 +58,23 @@ const SEED_NOTIFS = {
 
 const RATING_LABELS = ['Tap to rate', 'Bad', 'Poor', 'Okay', 'Good', 'Excellent'];
 
-function money(n) { return `$${Number(n ?? 0).toFixed(2)}`; }
+function money(n) { return `$${n.toFixed(2)}`; }
 
 /* ──────────────────────────────────────────────────────────────
  * Main component
  * ────────────────────────────────────────────────────────────── */
 
-export default function DashboardPage() {
-  const [activeNav,       setActiveNav]      = useState('Dashboard');
-
-  // Data state — would come from API
-  const [bookings,        setBookings]       = useState([]);
-  const [savedChefs,      setSavedChefs]     = useState([]);
-  const [reviews,         setReviews]        = useState(SEED_REVIEWS);
-  const [paymentMethods,  setPaymentMethods] = useState(SEED_PAYMENT_METHODS);
-  const [pantry,          setPantry]         = useState(SEED_PANTRY);
-  const [notifs,          setNotifs]         = useState(SEED_NOTIFS);
+export default function DashboardPage( { user }) {
+  const navigate = useNavigate();
+  const [activeNav,      setActiveNav]     = useState('Dashboard');
+ 
+  // Data state
+  const [bookings,       setBookings]      = useState([]);
+  const [savedChefs,     setSavedChefs]    = useState([]);
+  const [reviews,        setReviews]       = useState(SEED_REVIEWS);
+  const [paymentMethods, setPaymentMethods]= useState(SEED_PAYMENT_METHODS);
+  const [pantry,         setPantry]        = useState(SEED_PANTRY);
+  const [notifs,         setNotifs]        = useState(SEED_NOTIFS);
 
   // UI state
   const [loading,     setLoading]     = useState(true);
@@ -85,48 +82,33 @@ export default function DashboardPage() {
   const [toast,       setToast]       = useState('');
   const [reviewModal, setReviewModal] = useState(null);
 
-  /* Initial mock fetch */
+  /* ── Load user from localStorage + fetch real bookings ── */
   useEffect(() => {
+    if (!user) return;
     setLoading(true);
-    setError('');
-    const t = setTimeout(() => {
-      setBookings(SEED_BOOKINGS);
-      setSavedChefs(CHEFS.filter(c => SAVED_CHEF_IDS.includes(c.id)));
-      setLoading(false);
-    }, 250);
-    return () => clearTimeout(t);
-  }, []);
+    fetch(`http://localhost:8000/users/${user.user_id}/bookings`)
+      .then(r => r.json())
+      .then(data => {
+        setBookings(Array.isArray(data) ? data : (data.bookings ?? []));
+        setLoading(false);
+      })
+      .catch(() => {
+        setBookings([]);
+        setLoading(false);
+      });
+  }, [user]);
 
+  /* Scroll to top when switching panels */
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
   }, [activeNav]);
 
+  /* Auto-dismiss toast */
   useEffect(() => {
     if (!toast) return;
     const t = setTimeout(() => setToast(''), 2500);
     return () => clearTimeout(t);
   }, [toast]);
-
-  // Build display name and initials from logged-in user
-  const displayName = currentUser
-    ? toDisplayName(currentUser.username)
-    : 'Guest';
-  const initials = displayName
-    .split(' ')
-    .map(w => w[0])
-    .join('')
-    .slice(0, 2)
-    .toUpperCase();
-
-  // Compute stats from real bookings
-  const upcoming  = bookings.filter(b => b.upcoming);
-  const past      = bookings.filter(b => !b.upcoming);
-  const STATS = [
-    { label: 'Total Bookings', value: String(bookings.length),  sub: `${upcoming.length} upcoming` },
-    { label: 'Total Spent',    value: money(bookings.reduce((s, b) => s + (b.amount ?? 0), 0)), sub: '' },
-    { label: 'Reviews Left',   value: String(reviews.length),   sub: '' },
-    { label: 'Saved Chefs',    value: String(savedChefs.length), sub: '' },
-  ];
 
   /* ── Handlers ── */
 
@@ -193,7 +175,12 @@ export default function DashboardPage() {
   function togglePantry(category, value) {
     setPantry(prev => {
       const list = prev[category];
-      return { ...prev, [category]: list.includes(value) ? list.filter(x => x !== value) : [...list, value] };
+      return {
+        ...prev,
+        [category]: list.includes(value)
+          ? list.filter(x => x !== value)
+          : [...list, value],
+      };
     });
   }
 
@@ -201,21 +188,10 @@ export default function DashboardPage() {
     setPantry(prev => ({ ...prev, staples: val }));
   }
 
-  function savePantry() {
-    setToast('Pantry profile saved.');
-  }
-
-  function toggleNotif(key) {
-    setNotifs(prev => ({ ...prev, [key]: !prev[key] }));
-  }
-
-  function saveSettings() {
-    setToast('Notification preferences saved.');
-  }
-
-  function notImplemented() {
-    setToast('This will be available once the backend is connected.');
-  }
+  function savePantry() { setToast('Pantry profile saved.'); }
+  function toggleNotif(key) { setNotifs(prev => ({ ...prev, [key]: !prev[key] })); }
+  function saveSettings() { setToast('Notification preferences saved.'); }
+  function notImplemented() { setToast('This will be available once the backend is connected.'); }
 
   /* ── Panel router ── */
 
@@ -235,24 +211,10 @@ export default function DashboardPage() {
       case 'Payments':
         return <PaymentsPanel paymentMethods={paymentMethods} transactions={bookings} onRemoveCard={handleRemoveCard} onMakeDefault={handleMakeDefault} onAddCard={handleAddCard} />;
       case 'Settings':
-        return (
-          <SettingsPanel
-            notifs={notifs}
-            toggleNotif={toggleNotif}
-            onSave={saveSettings}
-            onEditField={notImplemented}
-          />
-        );
+        return <SettingsPanel user={user} notifs={notifs} toggleNotif={toggleNotif} onSave={saveSettings} onEditField={notImplemented} />;
       case 'Dashboard':
       default:
-        return (
-          <OverviewPanel
-            bookings={bookings}
-            onCancel={handleCancel}
-            onReschedule={handleReschedule}
-            onLeaveReview={handleOpenReview}
-          />
-        );
+        return <OverviewPanel user={user} bookings={bookings} onCancel={handleCancel} onReschedule={handleReschedule} onLeaveReview={handleOpenReview} />;
     }
   }
 
@@ -260,15 +222,9 @@ export default function DashboardPage() {
     <main className={styles.page}>
       <aside className={styles.sidebar}>
         <div className={styles.sidebarUser}>
-          <div className={styles.sidebarAvatar}>{USER.initials}</div>
-          <strong>{USER.name}</strong>
+          <div className={styles.sidebarAvatar}>{user?.initials ?? '?'}</div>
+          <strong>{user?.username ?? 'Loading...'}</strong>
           <small>Customer Account</small>
-          <button
-            onClick={handleLogout}
-            style={{ marginTop: 8, fontSize: 11, color: '#999', background: 'none', border: 'none', cursor: 'pointer' }}
-          >
-            Log out
-          </button>
         </div>
         <nav className={styles.sidebarNav}>
           {NAV_ITEMS.map(item => (
@@ -285,12 +241,10 @@ export default function DashboardPage() {
         </nav>
       </aside>
 
-      {/* Main panel */}
       <div className={styles.main}>
         {renderPanel()}
       </div>
 
-      {/* Review modal — overlays the whole dashboard */}
       {reviewModal && (
         <ReviewModal
           chefName={reviewModal.chefName}
@@ -310,17 +264,22 @@ export default function DashboardPage() {
  * Panels
  * ────────────────────────────────────────────────────────────── */
 
-function OverviewPanel({ bookings, onCancel, onReschedule, onLeaveReview }) {
+function OverviewPanel({ user, bookings, onCancel, onReschedule, onLeaveReview }) {
   const upcoming = bookings.filter(b => b.upcoming);
   const past     = bookings.filter(b => !b.upcoming);
-  const hour     = new Date().getHours();
-  const greeting = hour < 12 ? 'Good morning' : hour < 18 ? 'Good afternoon' : 'Good evening';
+
+  const stats = [
+    { label: 'Total Bookings', value: bookings.length,                                          sub: '' },
+    { label: 'Total Spent',    value: `$${bookings.reduce((s,b) => s+(b.amount||0), 0).toFixed(2)}`, sub: '' },
+    { label: 'Reviews Left',   value: bookings.filter(b => b.status==='completed' && !b.reviewed).length, sub: '' },
+    { label: 'Saved Chefs',    value: '—', sub: '' },
+  ];
 
   return (
     <>
       <div className={styles.greeting}>
-        <h1>Good evening, {USER.name.split(' ')[0]} 👋</h1>
-        <p>Here’s a summary of your ChefConnect activity.</p>
+        <h1>Good evening, {user?.username ?? '...'} 👋</h1>
+        <p>Here's a summary of your ChefConnect activity.</p>
       </div>
 
       <div className={styles.statsGrid}>
@@ -337,19 +296,16 @@ function OverviewPanel({ bookings, onCancel, onReschedule, onLeaveReview }) {
       {upcoming.length === 0 ? <EmptyBookings /> : (
         <div className={styles.bookingList}>
           {upcoming.map(b => (
-            <UpcomingBookingCard
-              key={b.id}
-              booking={b}
-              onCancel={onCancel}
-              onReschedule={onReschedule}
-            />
+            <UpcomingBookingCard key={b.id} booking={b} onCancel={onCancel} onReschedule={onReschedule} />
           ))}
         </div>
       )}
 
       <SectionHeader label="Past bookings" count={past.length} spaced />
       {past.length === 0 ? (
-        <div className={styles.emptyBox}><p className={styles.emptyText}>No past bookings yet.</p></div>
+        <div className={styles.emptyBox}>
+          <p className={styles.emptyText}>No past bookings yet.</p>
+        </div>
       ) : (
         <div className={styles.bookingList}>
           {past.map(b => <PastBookingCard key={b.id} booking={b} onLeaveReview={onLeaveReview} />)}
@@ -378,8 +334,10 @@ function BookingsPanel({ bookings, onCancel, onReschedule, onLeaveReview }) {
   });
 
   const FILTERS = [
-    { key: 'all', label: 'All' }, { key: 'upcoming', label: 'Upcoming' },
-    { key: 'completed', label: 'Completed' }, { key: 'cancelled', label: 'Cancelled' },
+    { key: 'all',       label: 'All' },
+    { key: 'upcoming',  label: 'Upcoming' },
+    { key: 'completed', label: 'Completed' },
+    { key: 'cancelled', label: 'Cancelled' },
   ];
 
   return (
@@ -387,8 +345,13 @@ function BookingsPanel({ bookings, onCancel, onReschedule, onLeaveReview }) {
       <PanelHeader title="My Bookings" sub="All your past and upcoming chef bookings in one place." />
       <div className={styles.filterRow}>
         {FILTERS.map(f => (
-          <button key={f.key} className={`${styles.filterChip} ${filter === f.key ? styles.filterChipActive : ''}`} onClick={() => setFilter(f.key)}>
-            {f.label}<span className={styles.filterCount}>{counts[f.key]}</span>
+          <button
+            key={f.key}
+            className={`${styles.filterChip} ${filter === f.key ? styles.filterChipActive : ''}`}
+            onClick={() => setFilter(f.key)}
+          >
+            {f.label}
+            <span className={styles.filterCount}>{counts[f.key]}</span>
           </button>
         ))}
       </div>
@@ -396,17 +359,8 @@ function BookingsPanel({ bookings, onCancel, onReschedule, onLeaveReview }) {
         <div className={styles.bookingList}>
           {filtered.map(b =>
             b.upcoming
-              ? <UpcomingBookingCard
-                  key={b.id}
-                  booking={b}
-                  onCancel={onCancel}
-                  onReschedule={onReschedule}
-                />
-              : <PastBookingCard
-                  key={b.id}
-                  booking={b}
-                  onLeaveReview={onLeaveReview}
-                />
+              ? <UpcomingBookingCard key={b.id} booking={b} onCancel={onCancel} onReschedule={onReschedule} />
+              : <PastBookingCard key={b.id} booking={b} onLeaveReview={onLeaveReview} />
           )}
         </div>
       )}
@@ -431,14 +385,7 @@ function SavedChefsPanel({ savedChefs, onRemoveSaved }) {
               <div className={styles.savedImg}>
                 <span className={styles.savedEmoji}>{c.emoji}</span>
                 {c.badge && <span className={styles.savedBadge}>{c.badge}</span>}
-                <button
-                  className={styles.savedRemoveBtn}
-                  onClick={() => onRemoveSaved(c.id)}
-                  aria-label={`Remove ${c.name} from saved`}
-                  title="Remove from saved"
-                >
-                  ×
-                </button>
+                <button className={styles.savedRemoveBtn} onClick={() => onRemoveSaved(c.id)} aria-label={`Remove ${c.name} from saved`}>×</button>
               </div>
               <div className={styles.savedBody}>
                 <strong>{c.name}</strong>
@@ -471,16 +418,8 @@ function PantryPanel({ pantry, togglePantry, setStaples, onSave }) {
         <PantryChipGroup label="Kitchen equipment" options={EQUIPMENT_OPTIONS} selected={pantry.equipment} onToggle={v => togglePantry('equipment', v)} />
         <div className={styles.formGroup}>
           <label htmlFor="pantry-staples" className={styles.formLabel}>Pantry staples</label>
-          <p className={styles.formHelp}>
-            Comma-separated. Helps Pantry Chefs plan a meal around what you already have.
-          </p>
-          <textarea
-            id="pantry-staples"
-            className={styles.formTextarea}
-            value={pantry.staples}
-            onChange={e => setStaples(e.target.value)}
-            placeholder="Onions, garlic, olive oil, eggs…"
-          />
+          <p className={styles.formHelp}>Comma-separated. Helps Pantry Chefs plan a meal around what you already have.</p>
+          <textarea id="pantry-staples" className={styles.formTextarea} value={pantry.staples} onChange={e => setStaples(e.target.value)} placeholder="Onions, garlic, olive oil, eggs…" />
         </div>
         <div className={styles.formActions}>
           <button className={styles.savePrimary} onClick={onSave}>Save changes</button>
@@ -494,16 +433,10 @@ function ReviewsPanel({ bookings, reviews, onLeaveReview, onDeleteReview }) {
   const awaiting = bookings.filter(b => b.status === 'completed' && !b.reviewed);
   return (
     <>
-      <PanelHeader
-        title="My Reviews"
-        sub="Reviews you’ve written and bookings still waiting for your feedback."
-      />
-
+      <PanelHeader title="My Reviews" sub="Reviews you've written and bookings still waiting for your feedback." />
       <SectionHeader label="Awaiting your review" count={awaiting.length} />
       {awaiting.length === 0 ? (
-        <div className={styles.emptyBox}>
-          <p className={styles.emptyText}>You’re all caught up — nothing waiting for review.</p>
-        </div>
+        <div className={styles.emptyBox}><p className={styles.emptyText}>You're all caught up — nothing waiting for review.</p></div>
       ) : (
         <div className={styles.bookingList}>
           {awaiting.map(b => (
@@ -513,13 +446,8 @@ function ReviewsPanel({ bookings, reviews, onLeaveReview, onDeleteReview }) {
                 <div><strong>{b.chef}</strong><small>{b.cuisine}</small></div>
               </div>
               <div className={styles.cardMid}>
-                <div className={styles.dateBlock}>
-                  <span className={styles.dateMain}>{b.date}</span>
-                  <span className={styles.dateSub}>{b.time}</span>
-                </div>
-                <div className={styles.amountBlock}>
-                  <span className={styles.amountMain}>{money(b.amount)}</span>
-                </div>
+                <div className={styles.dateBlock}><span className={styles.dateMain}>{b.date}</span><span className={styles.dateSub}>{b.time}</span></div>
+                <div className={styles.amountBlock}><span className={styles.amountMain}>{money(b.amount)}</span></div>
               </div>
               <div className={styles.cardActions}>
                 <button className={styles.savePrimary} onClick={() => onLeaveReview(b)}>Write review</button>
@@ -558,37 +486,20 @@ function ReviewsPanel({ bookings, reviews, onLeaveReview, onDeleteReview }) {
 function PaymentsPanel({ paymentMethods, transactions, onRemoveCard, onMakeDefault, onAddCard }) {
   return (
     <>
-      <PanelHeader
-        title="Payments"
-        sub="Manage your saved cards and review your transaction history."
-      />
-
+      <PanelHeader title="Payments" sub="Manage your saved cards and review your transaction history." />
       <SectionHeader label="Payment methods" count={paymentMethods.length} />
       <div className={styles.cardsList}>
         {paymentMethods.map(p => (
           <div key={p.id} className={styles.payCard}>
             <div className={styles.payCardLeft}>
               <div className={styles.payCardChip} aria-hidden="true">💳</div>
-              <div>
-                <strong>{p.brand} •••• {p.last4}</strong>
-                <small>Expires {p.exp}</small>
-              </div>
+              <div><strong>{p.brand} •••• {p.last4}</strong><small>Expires {p.exp}</small></div>
             </div>
             <div className={styles.payCardRight}>
-              {p.isDefault ? (
-                <span className={styles.defaultBadge}>Default</span>
-              ) : (
-                <button className={styles.linkBtn} onClick={() => onMakeDefault(p.id)}>
-                  Make default
-                </button>
-              )}
-              <button
-                className={styles.removeBtn}
-                onClick={() => onRemoveCard(p.id)}
-                aria-label="Remove card"
-              >
-                ×
-              </button>
+              {p.isDefault
+                ? <span className={styles.defaultBadge}>Default</span>
+                : <button className={styles.linkBtn} onClick={() => onMakeDefault(p.id)}>Make default</button>}
+              <button className={styles.removeBtn} onClick={() => onRemoveCard(p.id)} aria-label="Remove card">×</button>
             </div>
           </div>
         ))}
@@ -619,7 +530,7 @@ function PaymentsPanel({ paymentMethods, transactions, onRemoveCard, onMakeDefau
   );
 }
 
-function SettingsPanel({ notifs, toggleNotif, onSave, onEditField }) {
+function SettingsPanel({ user, notifs, toggleNotif, onSave, onEditField }) {
   return (
     <>
       <PanelHeader title="Settings" sub="Manage your account and how we get in touch." />
@@ -627,20 +538,23 @@ function SettingsPanel({ notifs, toggleNotif, onSave, onEditField }) {
         <h3 className={styles.formCardTitle}>Account</h3>
         <div className={styles.settingsRow}>
           <div>
-            <span className={styles.settingsRowLabel}>Name</span>
-            <span className={styles.settingsRowValue}>{USER.name}</span>
+            <span className={styles.settingsRowLabel}>Username</span>
+            <span className={styles.settingsRowValue}>{user?.username ?? '—'}</span>
           </div>
           <button className={styles.linkBtn} onClick={onEditField}>Edit</button>
         </div>
         <div className={styles.settingsRow}>
           <div>
             <span className={styles.settingsRowLabel}>Email</span>
-            <span className={styles.settingsRowValue}>{USER.email}</span>
+            <span className={styles.settingsRowValue}>{user?.email ?? '—'}</span>
           </div>
           <button className={styles.linkBtn} onClick={onEditField}>Edit</button>
         </div>
         <div className={styles.settingsRow}>
-          <div><span className={styles.settingsRowLabel}>Password</span><span className={styles.settingsRowValue}>••••••••</span></div>
+          <div>
+            <span className={styles.settingsRowLabel}>Password</span>
+            <span className={styles.settingsRowValue}>••••••••</span>
+          </div>
           <button className={styles.linkBtn} onClick={onEditField}>Change</button>
         </div>
       </div>
@@ -655,22 +569,24 @@ function SettingsPanel({ notifs, toggleNotif, onSave, onEditField }) {
       </div>
       <div className={`${styles.formCard} ${styles.dangerCard}`}>
         <h3 className={styles.formCardTitle}>Danger zone</h3>
-        <p className={styles.dangerText}>
-          Permanently delete your account and all associated data.
-          This cannot be undone.
-        </p>
-        <button className={styles.dangerBtn} onClick={onEditField}>
-          Delete my account
-        </button>
+        <p className={styles.dangerText}>Permanently delete your account and all associated data. This cannot be undone.</p>
+        <button className={styles.dangerBtn} onClick={onEditField}>Delete my account</button>
       </div>
     </>
   );
 }
 
-/* ── Sub-components ─────────────────────────────────────────── */
+/* ──────────────────────────────────────────────────────────────
+ * Sub-components
+ * ────────────────────────────────────────────────────────────── */
 
 function PanelHeader({ title, sub }) {
-  return <div className={styles.panelHeader}><h1>{title}</h1>{sub && <p>{sub}</p>}</div>;
+  return (
+    <div className={styles.panelHeader}>
+      <h1>{title}</h1>
+      {sub && <p>{sub}</p>}
+    </div>
+  );
 }
 
 function SectionHeader({ label, count, spaced }) {
@@ -750,7 +666,11 @@ function PantryChipGroup({ label, options, selected, onToggle }) {
 }
 
 function StarsDisplay({ rating }) {
-  return <span className={styles.starsDisplay}>{'★'.repeat(rating)}{'☆'.repeat(5 - rating)}</span>;
+  return (
+    <span className={styles.starsDisplay} aria-label={`${rating} out of 5 stars`}>
+      {'★'.repeat(rating)}{'☆'.repeat(5 - rating)}
+    </span>
+  );
 }
 
 function ToggleRow({ label, desc, checked, onChange }) {
@@ -760,14 +680,7 @@ function ToggleRow({ label, desc, checked, onChange }) {
         <span className={styles.toggleLabel}>{label}</span>
         <span className={styles.toggleDesc}>{desc}</span>
       </div>
-      <button
-        type="button"
-        className={`${styles.toggle} ${checked ? styles.toggleOn : ''}`}
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
-        onClick={onChange}
-      >
+      <button type="button" className={`${styles.toggle} ${checked ? styles.toggleOn : ''}`} role="switch" aria-checked={checked} aria-label={label} onClick={onChange}>
         <span className={styles.toggleKnob} />
       </button>
     </div>
@@ -785,64 +698,59 @@ function EmptyBookings() {
 }
 
 function PanelLoader() {
-  return <div className={styles.stateBox}><div className={styles.spinner} /><p>Loading dashboard…</p></div>;
+  return (
+    <div className={styles.stateBox}>
+      <div className={styles.spinner} aria-hidden="true" />
+      <p>Loading dashboard…</p>
+    </div>
+  );
 }
 
 function PanelError({ message }) {
-  return <div className={styles.stateBox}><h4>Could not load dashboard</h4><p>{message}</p></div>;
+  return (
+    <div className={styles.stateBox}>
+      <h4>Could not load dashboard</h4>
+      <p>{message}</p>
+    </div>
+  );
 }
 
+/* ──────────────────────────────────────────────────────────────
+ * Review Modal
+ * ────────────────────────────────────────────────────────────── */
+
 function ReviewModal({ chefName, chefEmoji, bookingDate, onClose, onSubmit }) {
-  const [rating, setRating]   = useState(0);
-  const [hover, setHover]     = useState(0);
+  const [rating,  setRating]  = useState(0);
+  const [hover,   setHover]   = useState(0);
   const [comment, setComment] = useState('');
-  const [error, setError]     = useState('');
+  const [error,   setError]   = useState('');
 
   function submit() {
     setError('');
-    if (rating === 0) {
-      setError('Please choose a star rating.');
-      return;
-    }
-    if (comment.trim().length < 10) {
-      setError('Please write at least 10 characters about your experience.');
-      return;
-    }
+    if (rating === 0) { setError('Please choose a star rating.'); return; }
+    if (comment.trim().length < 10) { setError('Please write at least 10 characters about your experience.'); return; }
     onSubmit({ rating, comment: comment.trim() });
   }
 
-  function handleKey(e) {
-    if (e.key === 'Escape') onClose();
-  }
+  function handleKey(e) { if (e.key === 'Escape') onClose(); }
 
-  // Lock body scroll while modal is open
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    const handleKey = e => { if (e.key === 'Escape') onClose(); };
     document.addEventListener('keydown', handleKey);
-    return () => { document.body.style.overflow = prev; document.removeEventListener('keydown', handleKey); };
-  }, [onClose]);
+    return () => {
+      document.body.style.overflow = prev;
+      document.removeEventListener('keydown', handleKey);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const ratingShown = hover || rating;
 
   return (
     <div className={styles.modalOverlay} onClick={onClose}>
-      <div
-        className={styles.modalCard}
-        onClick={e => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`Leave a review for ${chefName}`}
-      >
-        <button
-          className={styles.modalClose}
-          onClick={onClose}
-          aria-label="Close"
-        >
-          ×
-        </button>
-
+      <div className={styles.modalCard} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label={`Leave a review for ${chefName}`}>
+        <button className={styles.modalClose} onClick={onClose} aria-label="Close">×</button>
         <span className={styles.modalEyebrow}>Leave a review</span>
         <div className={styles.modalChef}>
           <div className={styles.modalChefAvatar}>{chefEmoji}</div>
@@ -852,31 +760,14 @@ function ReviewModal({ chefName, chefEmoji, bookingDate, onClose, onSubmit }) {
           <label className={styles.modalLabel}>Your rating</label>
           <div className={styles.starInput}>
             {[1, 2, 3, 4, 5].map(n => (
-              <button
-                key={n}
-                type="button"
-                className={`${styles.starBtn} ${ratingShown >= n ? styles.starBtnFilled : ''}`}
-                onClick={() => setRating(n)}
-                onMouseEnter={() => setHover(n)}
-                onMouseLeave={() => setHover(0)}
-                aria-label={`${n} star${n > 1 ? 's' : ''}`}
-              >
-                ★
-              </button>
+              <button key={n} type="button" className={`${styles.starBtn} ${ratingShown >= n ? styles.starBtnFilled : ''}`} onClick={() => setRating(n)} onMouseEnter={() => setHover(n)} onMouseLeave={() => setHover(0)} aria-label={`${n} star${n > 1 ? 's' : ''}`}>★</button>
             ))}
             <span className={styles.starInputLabel}>{RATING_LABELS[ratingShown]}</span>
           </div>
         </div>
         <div className={styles.modalGroup}>
           <label htmlFor="rev-comment" className={styles.modalLabel}>Your review</label>
-          <textarea
-            id="rev-comment"
-            className={styles.modalTextarea}
-            placeholder="What was the food like? How was the chef? Would you book them again?"
-            value={comment}
-            onChange={e => setComment(e.target.value)}
-            rows={5}
-          />
+          <textarea id="rev-comment" className={styles.modalTextarea} placeholder="What was the food like? How was the chef? Would you book them again?" value={comment} onChange={e => setComment(e.target.value)} rows={5} />
           <small className={styles.modalCounter}>{comment.length} characters</small>
         </div>
         {error && <div className={styles.modalError} role="alert">{error}</div>}

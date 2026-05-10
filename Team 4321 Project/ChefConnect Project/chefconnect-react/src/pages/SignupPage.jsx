@@ -4,7 +4,7 @@ import styles from './SignupPage.module.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
-export default function SignupPage() {
+export default function SignupPage( { onLogin }) {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
@@ -53,10 +53,12 @@ export default function SignupPage() {
       }
 
       const data = await res.json();
-      localStorage.setItem('user_id',  data.user_id);
-      localStorage.setItem('username', form.username);
-      localStorage.setItem('email',    form.email);
-      localStorage.setItem('role',     'customer');
+      onLogin({
+      user_id:  data.user_id,
+      username: form.username,
+      email:    form.email,
+      role:     'Customer',
+      });
       navigate('/dashboard');
 
     } catch (err) {
