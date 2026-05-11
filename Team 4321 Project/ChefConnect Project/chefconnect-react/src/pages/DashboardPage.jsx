@@ -44,7 +44,7 @@ export default function DashboardPage( { user }) {
  
   // Data state
   const [bookings,       setBookings]      = useState([]);
-  const [reviews,        setReviews]       = useState(SEED_REVIEWS);
+  const [reviews,        setReviews]       = useState([]);   
   const [paymentMethods, setPaymentMethods]= useState(SEED_PAYMENT_METHODS);
   const [pantry,         setPantry]        = useState([]);   
   const [notifs,         setNotifs]        = useState(SEED_NOTIFS);
@@ -55,34 +55,35 @@ export default function DashboardPage( { user }) {
   const [toast,       setToast]       = useState('');
   const [reviewModal, setReviewModal] = useState(null);
 
-  /* ── Load user from localStorage + fetch real bookings ── */
-  useEffect(() => {
+ useEffect(() => {
     if (!user) return;
     setLoading(true);
     fetch(`http://localhost:8000/users/${user.user_id}/bookings`)
       .then(r => r.json())
       .then(data => {
         const raw = Array.isArray(data) ? data : (data.bookings ?? []);
+        // CHANGED: build a set of chef_ids the user has already reviewed
+        const reviewedChefIds = new Set(reviews.map(r => r.chefId));
         const mapped = raw.map(b => ({
-         ...b,
-        id:       b.booking_id,
-        chef:     b.chef_name,
-       date:     b.booking_date,
-       time:     typeof b.booking_time === 'string' ? b.booking_time.slice(0,5) : '',
-       amount: parseFloat(b.total_amount) || 0,
-       upcoming: b.status === 'pending' || b.status === 'accepted',
-       reviewed: false,
-        emoji:    '🧑‍🍳',
-        cuisine:  '',
-      }));
-  setBookings(mapped);
-  setLoading(false);
-})
+          ...b,
+          id:       b.booking_id,
+          chef:     b.chef_name,
+          date:     b.booking_date,
+          time:     typeof b.booking_time === 'string' ? b.booking_time.slice(0,5) : '',
+          amount:   parseFloat(b.total_amount) || 0,
+          upcoming: b.status === 'pending' || b.status === 'accepted',
+          reviewed: reviewedChefIds.has(b.chef_id),   // CHANGED: true if user has reviewed this chef
+          emoji:    '🧑‍🍳',
+          cuisine:  '',
+        }));
+        setBookings(mapped);
+        setLoading(false);
+      })
       .catch(() => {
         setBookings([]);
         setLoading(false);
       });
-  }, [user]);
+  }, [user, reviews]);   // CHANGED: also re-runs when reviews load, so reviewed flag is accurate
 
   useEffect(() => {
   if (!user) return;
@@ -108,28 +109,55 @@ export default function DashboardPage( { user }) {
   /* Scroll to top when switching panels */
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
-    if ((activeNav === 'My Bookings' || activeNav === 'Dashboard') && user) { //to refresh booking whenever user goes back to dashboard or bookings panel
-    fetch(`http://localhost:8000/users/${user.user_id}/bookings`)
+    if ((activeNav === 'My Bookings' || activeNav === 'Dashboard') && user) {
+      fetch(`http://localhost:8000/users/${user.user_id}/bookings`)
+        .then(r => r.json())
+        .then(data => {
+          const raw = Array.isArray(data) ? data : (data.bookings ?? []);
+          // CHANGED: same reviewed cross-reference as the main fetch
+          const reviewedChefIds = new Set(reviews.map(r => r.chefId));
+          const mapped = raw.map(b => ({
+            ...b,
+            id:       b.booking_id,
+            chef:     b.chef_name,
+            date:     b.booking_date,
+            time:     typeof b.booking_time === 'string' ? b.booking_time.slice(0,5) : '',
+            amount:   parseFloat(b.total_amount) || 0,
+            upcoming: b.status === 'pending' || b.status === 'accepted',
+            reviewed: reviewedChefIds.has(b.chef_id),   // CHANGED
+            emoji:    '🧑‍🍳',
+            cuisine:  '',
+          }));
+          setBookings(mapped);
+        })
+        .catch(() => {});
+    }
+  }, [activeNav, user, reviews]);   // CHANGED: also depends on reviews
+
+
+/*: fetch user's reviews so they persist across logins */
+  useEffect(() => {
+    if (!user) return;
+    fetch(`http://localhost:8000/users/${user.user_id}/reviews`)
       .then(r => r.json())
       .then(data => {
-        const raw = Array.isArray(data) ? data : (data.bookings ?? []);
-        const mapped = raw.map(b => ({
-          ...b,
-          id:       b.booking_id,
-          chef:     b.chef_name,
-          date:     b.booking_date,
-          time:     typeof b.booking_time === 'string' ? b.booking_time.slice(0,5) : '',
-         amount: parseFloat(b.total_amount) || 0,
-          upcoming: b.status === 'pending' || b.status === 'accepted',
-          reviewed: false,
-          emoji:    '🧑‍🍳',
-          cuisine:  '',
+        // Map backend shape to the shape ReviewsPanel expects
+        const mapped = (data.reviews ?? []).map(r => ({
+          id:          'r' + r.review_id,
+          chefId:      r.chef_id,
+          chefName:    r.chef_name,
+          chefEmoji:   '🧑‍🍳',
+          rating:      Number(r.rating),
+          comment:     r.comment ?? '',
+          dateWritten: r.created_at
+            ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+            : '',
+          bookingDate: '', 
         }));
-        setBookings(mapped);
+        setReviews(mapped);
       })
-      .catch(() => {});
-  }
-}, [activeNav, user]);
+      .catch(() => setReviews([]));
+  }, [user]);
 
   /* Auto-dismiss toast */
   useEffect(() => {
@@ -172,7 +200,7 @@ export default function DashboardPage( { user }) {
     });
   }
 
-  async function handleSubmitReview({ rating, comment }) {
+ async function handleSubmitReview({ rating, comment }) {
     if (!reviewModal) return;
     const { bookingId, chefId, chefName, chefEmoji, bookingDate } = reviewModal;
 
@@ -190,14 +218,24 @@ export default function DashboardPage( { user }) {
         return;
       }
 
-      const newReview = {
-        id:          'r' + Date.now(),
-        bookingId, chefId, chefName, chefEmoji, rating, comment,
-        dateWritten: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        bookingDate,
-      };
-      setReviews(prev => [newReview, ...prev]);
-      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, reviewed: true } : b));
+      // This way the review has the real review_id, created_at, etc.
+      const refreshed = await fetch(`http://localhost:8000/users/${user.user_id}/reviews`).then(r => r.json());
+      const mapped = (refreshed.reviews ?? []).map(r => ({
+        id:          'r' + r.review_id,
+        chefId:      r.chef_id,
+        chefName:    r.chef_name,
+        chefEmoji:   '🧑‍🍳',
+        rating:      Number(r.rating),
+        comment:     r.comment ?? '',
+        dateWritten: r.created_at
+          ? new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+          : '',
+        bookingDate: '',
+      }));
+      setReviews(mapped);
+
+      // Mark this booking AND any other bookings with the same chef as reviewed
+      setBookings(prev => prev.map(b => b.chef_id === chefId ? { ...b, reviewed: true } : b));
       setReviewModal(null);
       setToast('Review submitted. Thanks!');
     } catch {

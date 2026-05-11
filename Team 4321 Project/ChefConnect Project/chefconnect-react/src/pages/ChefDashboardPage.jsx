@@ -74,25 +74,38 @@ export default function ChefDashboardPage({ user }) {
     setLoading(false);
   }
 
-  async function handleBookingStatus(bookingId, status) {
+ async function handleBookingStatus(bookingId, status) {
     try {
-      await fetch(`http://localhost:8000/bookings/${bookingId}/status?status=${status}`, { method: 'PUT' });
-      setBookings(prev => prev.map(b => b.booking_id === bookingId ? { ...b, status } : b));
+      const res = await fetch(
+        `http://localhost:8000/bookings/${bookingId}/status?status=${status}&user_id=${user.user_id}`,
+        { method: 'PUT' }
+      );
+      const data = await res.json();
+
+      if (data.error || data.message?.startsWith('Invalid')) {
+        setToast(data.error || data.message);
+        return;
+      }
+
+      // Re-fetch all bookings so the UI matches the database
+      await loadAll();
       setToast(`Booking ${status}.`);
     } catch {
       setToast('Could not update booking.');
     }
   }
+
+  // lazy load customer's pantry for a specific booking (only called when chef expands)
   async function fetchPantryForBooking(bookingId, customerId) {
-  if (pantriesByBooking[bookingId]) return;   // already loaded, skip
-  try {
-    const res = await fetch(`http://localhost:8000/users/${customerId}/pantry`);
-    const data = await res.json();
-    setPantriesByBooking(prev => ({ ...prev, [bookingId]: data.pantry ?? [] }));
-  } catch {
-    setPantriesByBooking(prev => ({ ...prev, [bookingId]: [] }));
+    if (pantriesByBooking[bookingId]) return;   // already loaded, skip
+    try {
+      const res = await fetch(`http://localhost:8000/users/${customerId}/pantry`);
+      const data = await res.json();
+      setPantriesByBooking(prev => ({ ...prev, [bookingId]: data.pantry ?? [] }));
+    } catch {
+      setPantriesByBooking(prev => ({ ...prev, [bookingId]: [] }));
+    }
   }
-}
 
   function renderPanel() {
     if (loading) return <div className={styles.stateBox}><div className={styles.spinner} /><p>Loading dashboard…</p></div>;
