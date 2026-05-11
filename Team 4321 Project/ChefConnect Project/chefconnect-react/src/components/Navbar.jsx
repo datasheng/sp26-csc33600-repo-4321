@@ -23,7 +23,7 @@ export default function Navbar({ user, onLogout }) {
       <div className={styles.links}>
         <Link to="/"          className={isBrowse    ? styles.active : ''}>Browse Chefs</Link>
         <Link to="/dashboard" className={isDashboard ? styles.active : ''}>My Dashboard</Link>
-        {user && <Link to="/register" className={isChefReg ? styles.active : ''}>Become a Chef</Link>}
+        {user && user.role !== 'Chef' && <Link to="/register" className={isChefReg ? styles.active : ''}>Become a Chef</Link>}
       </div>
 
       <div className={styles.right}>

@@ -4,8 +4,22 @@ import styles from './ChefCard.module.css';
 /**
  * ChefCard
  */
+const SERVICE_TYPE_TAGS = new Set(['cuisine chef', 'pantry chef', 'both']);
+
+function getServiceLabel(tags) {
+  const hasCuisine = tags.some(t => t.toLowerCase() === 'cuisine chef');
+  const hasPantry  = tags.some(t => t.toLowerCase() === 'pantry chef');
+  const hasBoth    = tags.some(t => t.toLowerCase() === 'both');
+  if (hasBoth || (hasCuisine && hasPantry)) return 'Cuisine & Pantry';
+  if (hasCuisine) return 'Cuisine Chef';
+  if (hasPantry)  return 'Pantry Chef';
+  return null;
+}
+
 export default function ChefCard({ chef }) {
   const navigate = useNavigate();
+  const cuisineTags  = chef.tags.filter(t => !SERVICE_TYPE_TAGS.has(t.toLowerCase()));
+  const serviceLabel = getServiceLabel(chef.tags);
 
   return (
     <div className={styles.card} onClick={() => navigate(`/chef/${chef.id}`)}>
@@ -18,8 +32,12 @@ export default function ChefCard({ chef }) {
         <h3 className={styles.name}>{chef.name}</h3>
         <p className={styles.meta}>{chef.location} · {chef.experience} yrs experience</p>
 
+        {serviceLabel && (
+          <p className={styles.serviceType}>{serviceLabel}</p>
+        )}
+
         <div className={styles.tags}>
-          {chef.tags.map(tag => (
+          {cuisineTags.map(tag => (
             <span key={tag} className={styles.tag}>{tag}</span>
           ))}
         </div>

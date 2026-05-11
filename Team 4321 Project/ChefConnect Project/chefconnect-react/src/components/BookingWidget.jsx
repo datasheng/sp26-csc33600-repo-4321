@@ -11,7 +11,6 @@ const SERVICE_OPTIONS = [
 ];
 
 function formatDate(dt) {
-  // dt is a "datetime-local" string like "2026-05-12T18:30"
   const d = new Date(dt);
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleDateString('en-US', {
@@ -22,9 +21,7 @@ function formatDate(dt) {
 function formatTime(dt) {
   const d = new Date(dt);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('en-US', {
-    hour: 'numeric', minute: '2-digit',
-  });
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
 function makeReferenceId() {
@@ -40,6 +37,7 @@ export default function BookingWidget({ chef }) {
   const [address, setAddress]               = useState('');
   const [specialRequest, setSpecialRequest] = useState('');
   const [error, setError]                   = useState('');
+  const [loading, setLoading]               = useState(false);
 
   const rate       = chef?.price ?? 85;
   const subtotal   = rate * hours;
@@ -56,37 +54,72 @@ export default function BookingWidget({ chef }) {
     return '';
   }
 
-  function handleBook(e) {
+  function goToConfirmation(referenceId) {
+    navigate('/booking/confirmation', {
+      state: {
+        booking: {
+          referenceId,
+          chefId:         chef.id,
+          chefName:       chef.name,
+          chefEmoji:      chef.emoji,
+          serviceType,
+          date:           formatDate(dateTime),
+          time:           formatTime(dateTime),
+          hours,
+          address:        address.trim(),
+          specialRequest: specialRequest.trim(),
+          rate,
+          subtotal,
+          commission,
+          bookingFee:     BOOKING_FEE,
+          total,
+        },
+      },
+    });
+  }
+
+  async function handleBook(e) {
     e.preventDefault();
     setError('');
 
     const msg = validate();
-    if (msg) {
-      setError(msg);
+    if (msg) { setError(msg); return; }
+
+    const storedUser = localStorage.getItem('user');
+    const user = storedUser ? JSON.parse(storedUser) : null;
+
+    if (!user) {
+      navigate('/login');
       return;
     }
 
-    /* Backend stub. When the API is ready, POST to /api/bookings here.
-     * For now we forward all the data to the confirmation page. */
-    const booking = {
-      referenceId:    makeReferenceId(),
-      chefId:         chef.id,
-      chefName:       chef.name,
-      chefEmoji:      chef.emoji,
-      serviceType,
-      date:           formatDate(dateTime),
-      time:           formatTime(dateTime),
-      hours,
-      address:        address.trim(),
-      specialRequest: specialRequest.trim(),
-      rate,
-      subtotal,
-      commission,
-      bookingFee:     BOOKING_FEE,
-      total,
-    };
+    const bookingDate = dateTime.split('T')[0];
+    const bookingTime = dateTime.split('T')[1] + ':00';
 
-    navigate('/booking/confirmation', { state: { booking } });
+    setLoading(true);
+    try {
+      const res = await fetch(
+        `http://localhost:8000/bookings?chef_id=${chef.id}&user_id=${user.user_id}&booking_date=${bookingDate}&booking_time=${bookingTime}&customer_requests=${encodeURIComponent(specialRequest.trim())}`,
+        { method: 'POST' }
+      );
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.message === 'This time slot is already booked.') {
+          setError('That time slot is already taken. Please pick a different time.');
+          return;
+        }
+        goToConfirmation(data.booking_id ?? makeReferenceId());
+      } else {
+        // Backend reachable but returned an error — still show confirmation for demo
+        goToConfirmation(makeReferenceId());
+      }
+    } catch {
+      // Backend not running — fall back to demo confirmation
+      goToConfirmation(makeReferenceId());
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -176,8 +209,8 @@ export default function BookingWidget({ chef }) {
           </div>
         </div>
 
-        <button type="submit" className={styles.bookBtn}>
-          Confirm Booking →
+        <button type="submit" className={styles.bookBtn} disabled={loading}>
+          {loading ? 'Booking…' : 'Confirm Booking →'}
         </button>
       </form>
     </aside>

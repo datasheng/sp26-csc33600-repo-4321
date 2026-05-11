@@ -103,6 +103,7 @@ def register_user(username: str, email: str, password_hash: str, role: str):
     user_id = cursor.lastrowid
 
 
+    chef_id = None
     if role.lower().strip() == "chef":
         chef_sql = """
         INSERT INTO Chef (user_id)
@@ -110,10 +111,14 @@ def register_user(username: str, email: str, password_hash: str, role: str):
         """
         cursor.execute(chef_sql, (user_id,))
         conn.commit()
+        chef_id = cursor.lastrowid
 
     cursor.close()
     conn.close()
-    return {"message": "User registered successfully!", "user_id": user_id, "role_id": role_id}
+    response = {"message": "User registered successfully!", "user_id": user_id, "role_id": role_id}
+    if chef_id:
+        response["chef_id"] = chef_id
+    return response
 
 
 @app.post("/login")
