@@ -58,15 +58,17 @@ export default function ChefDashboardPage({ user }) {
         setChefProfile(myChef);
         const chefId = myChef.chef_id;
 
-        const [bookRes, revRes, dishRes] = await Promise.all([
+        const [bookRes, revRes, dishRes, availRes] = await Promise.all([
           fetch(`http://localhost:8000/chefs/${chefId}/bookings`).then(r => r.json()),
           fetch(`http://localhost:8000/chefs/${chefId}/reviews`).then(r => r.json()),
           fetch(`http://localhost:8000/chefs/${chefId}/dishes`).then(r => r.json()),
+          fetch(`http://localhost:8000/chefs/${chefId}/availability`).then(r => r.json()),
         ]);
 
         setBookings(bookRes.bookings ?? []);
         setReviews(revRes.reviews ?? []);
         setDishes(dishRes.dishes ?? []);
+        setAvailability(availRes.availability ?? []);
       }
     } catch (e) {
       console.error(e);
@@ -112,7 +114,7 @@ export default function ChefDashboardPage({ user }) {
 
     switch (activeNav) {
       case 'My Bookings':
-        return <BookingsPanel bookings={bookings} onStatus={handleBookingStatus} />;
+        return <BookingsPanel bookings={bookings} onStatus={handleBookingStatus} pantriesByBooking={pantriesByBooking} fetchPantryForBooking={fetchPantryForBooking} />;
       case 'My Profile':
         return <ProfilePanel user={user} chef={chefProfile} onSave={(bio, specialty) => {
           if (chefProfile) {
@@ -340,10 +342,19 @@ function ProfilePanel({ user, chef, onSave }) {
 }
 
 /* ── Availability ── */
-function AvailabilityPanel({ chefId, onAdd }) {
+function AvailabilityPanel({ availability, chefId, onAdd }) {
   const [day, setDay]     = useState('Monday');
   const [start, setStart] = useState('09:00');
   const [end, setEnd]     = useState('17:00');
+
+  function formatTime(t) {
+    if (typeof t === 'number') {
+      const h = Math.floor(t / 3600);
+      const m = Math.floor((t % 3600) / 60);
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+    return typeof t === 'string' ? t.slice(0, 5) : t;
+  }
 
   function submit() {
     onAdd(day, start + ':00', end + ':00');
@@ -377,6 +388,23 @@ function AvailabilityPanel({ chefId, onAdd }) {
           <button className={styles.savePrimary} onClick={submit}>Add availability</button>
         </div>
       </div>
+
+      {availability && availability.length > 0 && (
+        <>
+          <div className={styles.sectionHead} style={{ marginTop: '2rem' }}>
+            <p className={styles.tableLabel}>Current schedule</p>
+            <span className={styles.countPill}>{availability.length}</span>
+          </div>
+          <div className={styles.formCard}>
+            {availability.map(slot => (
+              <div key={slot.availability_id} className={styles.settingsRow} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span><strong>{slot.day_of_week}</strong></span>
+                <span>{formatTime(slot.start_time)} – {formatTime(slot.end_time)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </>
   );
 }

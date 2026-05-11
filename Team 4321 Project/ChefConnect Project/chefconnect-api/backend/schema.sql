@@ -35,7 +35,8 @@ CREATE TABLE MembershipPlan (
     plan_id INT AUTO_INCREMENT PRIMARY KEY,
     plan_name VARCHAR(255) NOT NULL UNIQUE,
     price DECIMAL(10, 2) NOT NULL,
-    duration_months int NOT NULL
+    duration_months INT DEFAULT 1,
+    benefits TEXT
 );
 
 CREATE TABLE Booking (
@@ -46,6 +47,7 @@ CREATE TABLE Booking (
     booking_time TIME NOT NULL,
     status VARCHAR(50) NOT NULL,
     customer_requests TEXT,
+    total_amount DECIMAL(10, 2) DEFAULT 0.00,
     FOREIGN KEY (chef_id) REFERENCES Chef(chef_id),
     FOREIGN KEY (user_id) REFERENCES User(user_id)
 );
@@ -138,6 +140,15 @@ CREATE TABLE ChefPayout (
     UNIQUE (chef_id)
 );
 
+CREATE TABLE UserPantry (
+    pantry_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    ingredient_name VARCHAR(255) NOT NULL,
+    quantity VARCHAR(255),
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES User(user_id)
+);
+
 UPDATE Role SET role_name = 'Admin' WHERE role_id = 1;
 UPDATE Role SET role_name = 'Chef' WHERE role_id = 2;
 UPDATE Role SET role_name = 'User' WHERE role_id = 3;
@@ -181,5 +192,3 @@ SELECT chef_id, rating
 FROM Chef;
 
 
-ALTER TABLE Booking
-ADD COLUMN total_amount DECIMAL(10, 2) DEFAULT 0.00;

@@ -101,6 +101,7 @@ export default function RegisterPage({ onLogin }) {
        `&email=${encodeURIComponent(form.email)}` +
         `&password_hash=${encodeURIComponent(form.password)}` +
         `&role=chef` +
+        `&account_holder=${encodeURIComponent(form.accountHolder)}` +
         `&routing_number=${encodeURIComponent(form.routingNumber)}` +
         `&account_number=${encodeURIComponent(form.accountNumber)}` +
         `&bank_name=${encodeURIComponent(form.bankName)}`,
@@ -123,7 +124,10 @@ export default function RegisterPage({ onLogin }) {
       // 2. Update chef profile (bio + specialty)
       if (form.bio || selectedTags.length > 0) {
         await fetch(
-          `http://localhost:8000/chefs/${chefId}/profile?bio=${encodeURIComponent(form.bio)}&specialty=${encodeURIComponent(selectedTags.join(', '))}`,
+          `http://localhost:8000/chefs/${chefId}/profile` +
+          `?user_id=${data.user_id}` +
+          `&bio=${encodeURIComponent(form.bio)}` +
+          `&specialty=${encodeURIComponent(selectedTags.join(', '))}`,
           { method: 'PUT' }
         ).catch(() => {});
       }

@@ -365,6 +365,13 @@ async function handleRemovePantryItem(pantryId) {
  * Panels
  * ────────────────────────────────────────────────────────────── */
 
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 12) return 'Good morning';
+  if (h < 18) return 'Good afternoon';
+  return 'Good evening';
+}
+
 function OverviewPanel({ user, bookings, onCancel, onReschedule, onLeaveReview }) {
   const upcoming = bookings.filter(b => b.upcoming);
   const past     = bookings.filter(b => !b.upcoming);
@@ -378,7 +385,7 @@ function OverviewPanel({ user, bookings, onCancel, onReschedule, onLeaveReview }
   return (
     <>
       <div className={styles.greeting}>
-        <h1>Good evening, {user?.username ?? '...'} 👋</h1>
+        <h1>{greeting()}, {user?.username ?? '...'} 👋</h1>
         <p>Here's a summary of your ChefConnect activity.</p>
       </div>
 
@@ -594,7 +601,6 @@ function ReviewsPanel({ bookings, reviews, onLeaveReview, onDeleteReview }) {
               <p className={styles.writtenReviewText}>"{r.comment}"</p>
               <div className={styles.writtenReviewFoot}>
                 <span className={styles.writtenReviewDate}>Written {r.dateWritten}</span>
-                <button className={styles.deleteLink} onClick={() => onDeleteReview(r.id)}>Delete</button>
               </div>
             </div>
           ))}
