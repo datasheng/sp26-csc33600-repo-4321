@@ -152,49 +152,6 @@
   color: #fff;
 }
 
-/* Service type */
-.serviceTypeRow {
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.serviceTypeBtn {
-  flex: 1;
-  min-width: 140px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  padding: 0.75rem 1rem;
-  border: 1.5px solid #ddd;
-  border-radius: 10px;
-  background: #fafafa;
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.15s;
-  font-family: inherit;
-}
-
-.serviceTypeBtn:hover {
-  border-color: #c0392b;
-}
-
-.serviceTypeSelected {
-  border-color: #c0392b;
-  background: #fdf0ee;
-}
-
-.serviceTypeLabel {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #1a1a1a;
-}
-
-.serviceTypeHint {
-  font-size: 0.78rem;
-  color: #888;
-}
-
 /* Availability */
 .availList {
   display: flex;

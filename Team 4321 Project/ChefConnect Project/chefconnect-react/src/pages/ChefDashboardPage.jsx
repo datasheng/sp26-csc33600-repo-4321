@@ -26,12 +26,13 @@ export default function ChefDashboardPage({ user }) {
   const [activeNav, setActiveNav] = useState('Overview');
   const [toast, setToast] = useState('');
 
-  const [bookings, setBookings]         = useState([]);
-  const [reviews, setReviews]           = useState([]);
-  const [dishes, setDishes]             = useState([]);
+  // Data
+  const [bookings, setBookings]       = useState([]);
+  const [reviews, setReviews]         = useState([]);
+  const [dishes, setDishes]           = useState([]);
   const [availability, setAvailability] = useState([]);
-  const [chefProfile, setChefProfile]   = useState(null);
-  const [loading, setLoading]           = useState(true);
+  const [chefProfile, setChefProfile] = useState(null);
+  const [loading, setLoading]         = useState(true);
 
   useEffect(() => {
     if (!user) return;
@@ -47,9 +48,10 @@ export default function ChefDashboardPage({ user }) {
   async function loadAll() {
     setLoading(true);
     try {
+      // Find chef_id from chefs list by matching user_id
       const chefsRes = await fetch('http://localhost:8000/chefs');
       const chefsData = await chefsRes.json();
-      const chefs = Array.isArray(chefsData) ? chefsData : (chefsData.chefs ?? []);
+      const chefs = chefsData.chefs ?? [];
       const myChef = chefs.find(c => String(c.username) === String(user.username));
       if (myChef) {
         setChefProfile(myChef);
@@ -73,10 +75,7 @@ export default function ChefDashboardPage({ user }) {
 
   async function handleBookingStatus(bookingId, status) {
     try {
-      await fetch(
-        `http://localhost:8000/bookings/${bookingId}/status?status=${status}&user_id=${user.user_id}`,
-        { method: 'PUT' }
-      );
+      await fetch(`http://localhost:8000/bookings/${bookingId}/status?status=${status}`, { method: 'PUT' });
       setBookings(prev => prev.map(b => b.booking_id === bookingId ? { ...b, status } : b));
       setToast(`Booking ${status}.`);
     } catch {
@@ -93,29 +92,20 @@ export default function ChefDashboardPage({ user }) {
       case 'My Profile':
         return <ProfilePanel user={user} chef={chefProfile} onSave={(bio, specialty) => {
           if (chefProfile) {
-            fetch(
-              `http://localhost:8000/chefs/${chefProfile.chef_id}/profile?user_id=${user.user_id}&bio=${encodeURIComponent(bio)}&specialty=${encodeURIComponent(specialty)}`,
-              { method: 'PUT' }
-            )
+            fetch(`http://localhost:8000/chefs/${chefProfile.chef_id}/profile?bio=${encodeURIComponent(bio)}&specialty=${encodeURIComponent(specialty)}`, { method: 'PUT' })
               .then(() => { setToast('Profile updated!'); loadAll(); })
               .catch(() => setToast('Could not save profile.'));
           }
         }} />;
       case 'My Availability':
         return <AvailabilityPanel availability={availability} chefId={chefProfile?.chef_id} onAdd={(day, start, end) => {
-          fetch(
-            `http://localhost:8000/chefs/${chefProfile.chef_id}/availability?user_id=${user.user_id}&day_of_week=${encodeURIComponent(day)}&start_time=${encodeURIComponent(start)}&end_time=${encodeURIComponent(end)}`,
-            { method: 'POST' }
-          )
+          fetch(`http://localhost:8000/chefs/${chefProfile.chef_id}/availability?day_of_week=${encodeURIComponent(day)}&start_time=${encodeURIComponent(start)}&end_time=${encodeURIComponent(end)}`, { method: 'POST' })
             .then(() => { setToast('Availability added!'); })
             .catch(() => setToast('Could not add availability.'));
         }} />;
       case 'My Menu':
         return <MenuPanel dishes={dishes} chefId={chefProfile?.chef_id} onAdd={(name, desc, price) => {
-          fetch(
-            `http://localhost:8000/chefs/${chefProfile.chef_id}/dishes?dish_name=${encodeURIComponent(name)}&description=${encodeURIComponent(desc)}&price=${price}`,
-            { method: 'POST' }
-          )
+          fetch(`http://localhost:8000/chefs/${chefProfile.chef_id}/dishes?dish_name=${encodeURIComponent(name)}&description=${encodeURIComponent(desc)}&price=${price}`, { method: 'POST' })
             .then(() => { setToast('Dish added!'); loadAll(); })
             .catch(() => setToast('Could not add dish.'));
         }} />;
@@ -131,7 +121,7 @@ export default function ChefDashboardPage({ user }) {
     <main className={styles.page}>
       <aside className={styles.sidebar}>
         <div className={styles.sidebarUser}>
-          <div className={styles.sidebarAvatar}>{user?.initials ?? user?.username?.slice(0,2).toUpperCase() ?? '?'}</div>
+          <div className={styles.sidebarAvatar}>{user?.username?.slice(0,2).toUpperCase() ?? '?'}</div>
           <strong>{user?.username ?? '...'}</strong>
           <small>Chef Account</small>
         </div>
@@ -159,6 +149,7 @@ export default function ChefDashboardPage({ user }) {
   );
 }
 
+/* ── Overview ── */
 function OverviewPanel({ user, chef, bookings, reviews, onNav }) {
   const totalBookings = bookings.length;
   const avgRating     = reviews.length ? (reviews.reduce((s, r) => s + Number(r.rating), 0) / reviews.length).toFixed(2) : '—';
@@ -214,6 +205,7 @@ function OverviewPanel({ user, chef, bookings, reviews, onNav }) {
   );
 }
 
+/* ── Bookings ── */
 function BookingsPanel({ bookings, onStatus }) {
   const [filter, setFilter] = useState('all');
 
@@ -246,8 +238,9 @@ function BookingsPanel({ bookings, onStatus }) {
   );
 }
 
+/* ── Profile ── */
 function ProfilePanel({ user, chef, onSave }) {
-  const [bio, setBio]             = useState(chef?.bio ?? '');
+  const [bio, setBio]           = useState(chef?.bio ?? '');
   const [specialty, setSpecialty] = useState(chef?.specialty ?? '');
   useEffect(() => {
     if (chef) {
@@ -296,6 +289,7 @@ function ProfilePanel({ user, chef, onSave }) {
   );
 }
 
+/* ── Availability ── */
 function AvailabilityPanel({ chefId, onAdd }) {
   const [day, setDay]     = useState('Monday');
   const [start, setStart] = useState('09:00');
@@ -337,6 +331,7 @@ function AvailabilityPanel({ chefId, onAdd }) {
   );
 }
 
+/* ── Menu ── */
 function MenuPanel({ dishes, onAdd }) {
   const [name, setName]   = useState('');
   const [desc, setDesc]   = useState('');
@@ -398,6 +393,7 @@ function MenuPanel({ dishes, onAdd }) {
   );
 }
 
+/* ── Reviews ── */
 function ReviewsPanel({ reviews }) {
   const avg = reviews.length
     ? (reviews.reduce((s, r) => s + Number(r.rating), 0) / reviews.length).toFixed(2)
@@ -429,6 +425,7 @@ function ReviewsPanel({ reviews }) {
   );
 }
 
+/* ── Shared sub-components ── */
 function BookingCard({ booking, onStatus }) {
   const isPending = booking.status === 'pending';
   return (
@@ -442,24 +439,24 @@ function BookingCard({ booking, onStatus }) {
       </div>
       <div className={styles.cardMid}>
         {booking.customer_requests && (
-          <div className={styles.requestBox}>
+            <div className={styles.requestBox}>
             <span className={styles.requestLabel}>Special request:</span>
             <p className={styles.requests}>"{booking.customer_requests}"</p>
-          </div>
+            </div>
         )}
       </div>
       <div className={styles.cardRight}>
         <span className={`${styles.statusBadge} ${styles['status_' + booking.status]}`}>{booking.status}</span>
         {onStatus && (
-          <div className={styles.cardActions}>
-            {isPending && <>
-              <button className={styles.btnAccept} onClick={() => onStatus(booking.booking_id, 'accepted')}>Accept</button>
-              <button className={styles.btnDecline} onClick={() => onStatus(booking.booking_id, 'declined')}>Decline</button>
-            </>}
+            <div className={styles.cardActions}>
+             {isPending && <>
+                <button className={styles.btnAccept} onClick={() => onStatus(booking.booking_id, 'accepted')}>Accept</button>
+                <button className={styles.btnDecline} onClick={() => onStatus(booking.booking_id, 'declined')}>Decline</button>
+                </>}
             {booking.status === 'accepted' && (
-              <button className={styles.btnDecline} onClick={() => onStatus(booking.booking_id, 'cancelled')}>Cancel</button>
-            )}
-          </div>
+                <button className={styles.btnDecline} onClick={() => onStatus(booking.booking_id, 'cancelled')}>Cancel</button>
+             )}
+            </div>
         )}
       </div>
     </div>

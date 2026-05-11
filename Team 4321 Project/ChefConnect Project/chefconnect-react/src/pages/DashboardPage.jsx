@@ -15,16 +15,26 @@ const NAV_ITEMS = [
   { icon: '⚙️',   label: 'Settings' },
 ];
 
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 17) return 'Good afternoon';
-  return 'Good evening';
-}
+const SAVED_CHEF_IDS = [1, 2, 4];
 
-const SEED_REVIEWS = [];
+const SEED_REVIEWS = [
+  {
+    id: 'r1',
+    bookingId: 3,
+    chefId: 3,
+    chefName: 'Priya Nair',
+    chefEmoji: '👩🏽‍🍳',
+    rating: 5,
+    comment: "The Kerala fish curry was perfect — properly spiced, properly thickened. We requested vegan substitutions for half the table and Priya nailed both versions. Will absolutely book again.",
+    dateWritten: 'Apr 16, 2026',
+    bookingDate: 'Apr 15, 2026',
+  },
+];
 
-const SEED_PAYMENT_METHODS = [];
+const SEED_PAYMENT_METHODS = [
+  { id: 'pm1', brand: 'Visa',       last4: '4242', exp: '04/27', isDefault: true  },
+  { id: 'pm2', brand: 'Mastercard', last4: '8872', exp: '11/26', isDefault: false },
+];
 
 const SEED_PANTRY = {
   dietary:      ['Vegetarian'],

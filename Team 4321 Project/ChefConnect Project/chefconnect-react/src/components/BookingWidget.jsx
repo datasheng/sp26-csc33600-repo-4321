@@ -54,74 +54,63 @@ export default function BookingWidget({ chef }) {
     return '';
   }
 
-  function goToConfirmation(referenceId) {
-    navigate('/booking/confirmation', {
-      state: {
-        booking: {
-          referenceId,
-          chefId:         chef.id,
-          chefName:       chef.name,
-          chefEmoji:      chef.emoji,
-          serviceType,
-          date:           formatDate(dateTime),
-          time:           formatTime(dateTime),
-          hours,
-          address:        address.trim(),
-          specialRequest: specialRequest.trim(),
-          rate,
-          subtotal,
-          commission,
-          bookingFee:     BOOKING_FEE,
-          total,
-        },
-      },
-    });
+ async function handleBook(e) {
+  e.preventDefault();
+  setError('');
+
+  const msg = validate();
+  if (msg) { setError(msg); return; }
+
+  // Get logged in user
+  const storedUser = localStorage.getItem('user');
+  const user = storedUser ? JSON.parse(storedUser) : null;
+
+  if (!user) {
+    setError('You must be logged in to book a chef.');
+    return;
   }
 
-  async function handleBook(e) {
-    e.preventDefault();
-    setError('');
+  const bookingDate = dateTime.split('T')[0];        
+  const bookingTime = dateTime.split('T')[1] + ':00'; // "18:30:00"
 
-    const msg = validate();
-    if (msg) { setError(msg); return; }
+  try {
+    const res = await fetch(
+      `http://localhost:8000/bookings?chef_id=${chef.id}&user_id=${user.user_id}&booking_date=${bookingDate}&booking_time=${bookingTime}&customer_requests=${encodeURIComponent(specialRequest.trim())}`,
+      { method: 'POST' }
+    );
 
-    const storedUser = localStorage.getItem('user');
-    const user = storedUser ? JSON.parse(storedUser) : null;
-
-    if (!user) {
-      navigate('/login');
+    if (!res.ok) {
+      const err = await res.json();
+      setError(err.detail || 'Booking failed. That slot may already be taken.');
       return;
     }
 
-    const bookingDate = dateTime.split('T')[0];
-    const bookingTime = dateTime.split('T')[1] + ':00';
+    const data = await res.json();
 
-    setLoading(true);
-    try {
-      const res = await fetch(
-        `http://localhost:8000/bookings?chef_id=${chef.id}&user_id=${user.user_id}&booking_date=${bookingDate}&booking_time=${bookingTime}&customer_requests=${encodeURIComponent(specialRequest.trim())}`,
-        { method: 'POST' }
-      );
+    const booking = {
+      referenceId:    data.booking_id,
+      chefId:         chef.id,
+      chefName:       chef.name,
+      chefEmoji:      chef.emoji,
+      serviceType,
+      date:           formatDate(dateTime),
+      time:           formatTime(dateTime),
+      hours,
+      address:        address.trim(),
+      specialRequest: specialRequest.trim(),
+      rate,
+      subtotal,
+      commission,
+      bookingFee:     BOOKING_FEE,
+      total,
+    };
 
-      if (res.ok) {
-        const data = await res.json();
-        if (data.message === 'This time slot is already booked.') {
-          setError('That time slot is already taken. Please pick a different time.');
-          return;
-        }
-        goToConfirmation(data.booking_id ?? makeReferenceId());
-      } else {
-        // Backend reachable but returned an error — still show confirmation for demo
-        goToConfirmation(makeReferenceId());
-      }
-    } catch {
-      // Backend not running — fall back to demo confirmation
-      goToConfirmation(makeReferenceId());
-    } finally {
-      setLoading(false);
-    }
+    navigate('/booking/confirmation', { state: { booking } });
+
+  } catch {
+    setError('Could not connect to server. Is the backend running?');
   }
-
+}
   return (
     <aside className={styles.card}>
       <h3 className={styles.title}>Book {chef?.name ?? 'this chef'}</h3>
