@@ -385,12 +385,30 @@ def get_user_bookings(user_id: int):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # The procedure auto-computes "completed" status if the booking time has passed
-    cursor.callproc("GetUserBookingsWithStatus", (user_id,))
-
-    bookings = []
-    for result in cursor.stored_results():
-        bookings = result.fetchall()
+    sql = """
+    SELECT
+        b.booking_id,
+        b.chef_id,
+        u.username AS chef_name,
+        b.booking_date,
+        b.booking_time,
+        b.customer_requests,
+        b.total_amount,
+        CASE
+            WHEN b.status IN ('declined','cancelled') THEN b.status
+            WHEN b.status = 'completed' THEN 'completed'
+            WHEN b.status IN ('accepted','pending')
+                 AND TIMESTAMP(b.booking_date, b.booking_time) < NOW() THEN 'completed'
+            ELSE b.status
+        END AS status
+    FROM Booking b
+    JOIN Chef c ON b.chef_id = c.chef_id
+    JOIN User u ON c.user_id = u.user_id
+    WHERE b.user_id = %s
+    ORDER BY b.booking_date DESC, b.booking_time DESC
+    """
+    cursor.execute(sql, (user_id,))
+    bookings = cursor.fetchall()
 
     cursor.close()
     conn.close()
@@ -491,12 +509,29 @@ def get_chef_bookings(chef_id: int):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    # CHANGED: now uses stored procedure GetChefBookingsWithStatus
-    cursor.callproc("GetChefBookingsWithStatus", (chef_id,))
-
-    bookings = []
-    for result in cursor.stored_results():
-        bookings = result.fetchall()
+    sql = """
+    SELECT
+        b.booking_id,
+        b.user_id AS customer_id,
+        u.username AS customer_name,
+        b.booking_date,
+        b.booking_time,
+        b.customer_requests,
+        b.total_amount,
+        CASE
+            WHEN b.status IN ('declined','cancelled') THEN b.status
+            WHEN b.status = 'completed' THEN 'completed'
+            WHEN b.status IN ('accepted','pending')
+                 AND TIMESTAMP(b.booking_date, b.booking_time) < NOW() THEN 'completed'
+            ELSE b.status
+        END AS status
+    FROM Booking b
+    JOIN User u ON b.user_id = u.user_id
+    WHERE b.chef_id = %s
+    ORDER BY b.booking_date DESC, b.booking_time DESC
+    """
+    cursor.execute(sql, (chef_id,))
+    bookings = cursor.fetchall()
 
     cursor.close()
     conn.close()
