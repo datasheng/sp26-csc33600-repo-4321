@@ -78,6 +78,11 @@ CREATE TABLE BookingDish (
     FOREIGN KEY (booking_id) REFERENCES Booking(booking_id)
 );
 
+CREATE TABLE ingredient (
+    ingredient_id INT AUTO_INCREMENT PRIMARY KEY,
+    ingredient_name VARCHAR(255) NOT NULL UNIQUE
+);
+
 CREATE TABLE DishIngredient (
     dish_ingredient_id INT AUTO_INCREMENT PRIMARY KEY,
     dish_id int NOT NULL,
@@ -85,11 +90,6 @@ CREATE TABLE DishIngredient (
     quantity VARCHAR(255) NOT NULL,
     FOREIGN KEY (dish_id) REFERENCES Dish(dish_id),
     FOREIGN KEY (ingredient_id) REFERENCES ingredient(ingredient_id)
-);
-
-CREATE TABLE ingredient (
-    ingredient_id INT AUTO_INCREMENT PRIMARY KEY,
-    ingredient_name VARCHAR(255) NOT NULL UNIQUE
 );
 
 CREATE TABLE ChefMembership (
