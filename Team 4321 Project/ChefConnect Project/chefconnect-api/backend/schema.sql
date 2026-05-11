@@ -46,6 +46,7 @@ CREATE TABLE Booking (
     booking_time TIME NOT NULL,
     status VARCHAR(50) NOT NULL,
     customer_requests TEXT,
+    total_amount DECIMAL(10, 2) DEFAULT 0.00,
     FOREIGN KEY (chef_id) REFERENCES Chef(chef_id),
     FOREIGN KEY (user_id) REFERENCES User(user_id)
 );
@@ -123,6 +124,43 @@ CREATE TABLE UserPaymentMethod (
     billing_zip VARCHAR(10),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES User(user_id),
+    UNIQUE (user_id)
+);
+
+-- NEW: stores chef bank account info for payouts
+CREATE TABLE ChefPayout (
+    payout_id INT AUTO_INCREMENT PRIMARY KEY,
+    chef_id INT NOT NULL,
+    account_holder VARCHAR(255) NOT NULL,
+    routing_number VARCHAR(20) NOT NULL,
+    account_number VARCHAR(30) NOT NULL,
+    bank_name VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (chef_id) REFERENCES Chef(chef_id),
+    UNIQUE (chef_id)
+);
+
+-- NEW: customer pantry ingredients (free text, technically 2NF on single-column PK)
+CREATE TABLE UserPantry (
+    pantry_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    ingredient_name VARCHAR(255) NOT NULL,
+    quantity VARCHAR(255),
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES User(user_id)
+);
+
+CREATE TABLE UserPaymentMethod (
+    payment_method_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    card_number VARCHAR(20) NOT NULL,
+    card_holder VARCHAR(255) NOT NULL,
+    exp_month VARCHAR(2) NOT NULL,
+    exp_year VARCHAR(4) NOT NULL,
+    cvv VARCHAR(4) NOT NULL,
+    billing_zip VARCHAR(10),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES User(user_id),
     UNIQUE (user_id)  -- one card per user for now
 );
 
@@ -142,6 +180,41 @@ UPDATE Role SET role_name = 'Admin' WHERE role_id = 1;
 UPDATE Role SET role_name = 'Chef' WHERE role_id = 2;
 UPDATE Role SET role_name = 'User' WHERE role_id = 3;
 SELECT * FROM Role;
+
+DROP PROCEDURE IF EXISTS GetUserBookingsWithStatus;
+CREATE PROCEDURE GetUserBookingsWithStatus(IN p_user_id INT)
+SELECT
+    b.booking_id, b.booking_date, b.booking_time,
+    b.customer_requests, b.total_amount,
+    c.chef_id, u.username AS chef_name,
+    CASE
+        WHEN b.status = 'accepted'
+             AND CONCAT(b.booking_date, ' ', b.booking_time) < NOW()
+        THEN 'completed'
+        ELSE b.status
+    END AS status
+FROM Booking b
+JOIN Chef c ON b.chef_id = c.chef_id
+JOIN User u ON c.user_id = u.user_id
+WHERE b.user_id = p_user_id
+ORDER BY b.booking_date DESC, b.booking_time DESC;
+
+DROP PROCEDURE IF EXISTS GetChefBookingsWithStatus;
+CREATE PROCEDURE GetChefBookingsWithStatus(IN p_chef_id INT)
+SELECT
+    b.booking_id, b.booking_date, b.booking_time,
+    b.customer_requests, b.total_amount,
+    u.user_id AS customer_id, u.username AS customer_name,
+    CASE
+        WHEN b.status = 'accepted'
+             AND CONCAT(b.booking_date, ' ', b.booking_time) < NOW()
+        THEN 'completed'
+        ELSE b.status
+    END AS status
+FROM Booking b
+JOIN User u ON b.user_id = u.user_id
+WHERE b.chef_id = p_chef_id
+ORDER BY b.booking_date DESC, b.booking_time DESC;
 
 SELECT * FROM User;
 
