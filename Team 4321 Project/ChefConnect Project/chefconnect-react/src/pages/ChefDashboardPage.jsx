@@ -130,10 +130,25 @@ export default function ChefDashboardPage({ user }) {
             .catch(() => setToast('Could not add availability.'));
         }} />;
       case 'My Menu':
-        return <MenuPanel dishes={dishes} chefId={chefProfile?.chef_id} onAdd={(name, desc, price) => {
-          fetch(`http://localhost:8000/chefs/${chefProfile.chef_id}/dishes?dish_name=${encodeURIComponent(name)}&description=${encodeURIComponent(desc)}&price=${price}`, { method: 'POST' })
-            .then(() => { setToast('Dish added!'); loadAll(); })
-            .catch(() => setToast('Could not add dish.'));
+        return <MenuPanel dishes={dishes} chefId={chefProfile?.chef_id} onAdd={async (name, desc, price) => {
+          try {
+            const res = await fetch(
+              `http://localhost:8000/chefs/${chefProfile.chef_id}/dishes` +
+              `?dish_name=${encodeURIComponent(name)}` +
+              `&description=${encodeURIComponent(desc)}` +
+              `&price=${price}`,
+              { method: 'POST' }
+            );
+            const data = await res.json();
+            if (data.dish_id) {
+              setToast('Dish added!');
+              await loadAll();
+            } else {
+              setToast(data.detail || 'Could not add dish.');
+            }
+          } catch {
+            setToast('Could not add dish.');
+          }
         }} />;
       case 'My Reviews':
         return <ReviewsPanel reviews={reviews} />;

@@ -93,6 +93,7 @@ def register_user(
 
     user_id = cursor.lastrowid
 
+    chef_id = None
     if role.lower().strip() == "chef":
         # Insert chef row
         cursor.execute("INSERT INTO Chef (user_id) VALUES (%s)", (user_id,))
@@ -121,7 +122,7 @@ def register_user(
 
     cursor.close()
     conn.close()
-    return {"message": "User registered successfully!", "user_id": user_id, "role_id": role_id}
+    return {"message": "User registered successfully!", "user_id": user_id, "role_id": role_id, "chef_id": chef_id}
 
 
 @app.post("/login")
@@ -163,23 +164,23 @@ def get_chefs():
         Chef.bio,
         Chef.specialty,
         Chef.rating,
+        (SELECT COUNT(*) FROM Review WHERE Review.chef_id = Chef.chef_id) AS review_count,
+        (SELECT GROUP_CONCAT(dish_name ORDER BY dish_name SEPARATOR ',')
+         FROM Dish WHERE Dish.chef_id = Chef.chef_id) AS dish_names,
         CASE
             WHEN ChefMembership.end_date >= CURDATE() THEN 1
             ELSE 0
         END AS has_membership,
-
         (
-            Chef.rating +
+            COALESCE(Chef.rating, 0) +
             CASE
                 WHEN ChefMembership.end_date >= CURDATE() THEN 0.5
                 ELSE 0
             END
         ) AS ranking_score
-
     FROM Chef
     JOIN User ON Chef.user_id = User.user_id
     LEFT JOIN ChefMembership ON Chef.chef_id = ChefMembership.chef_id
-
     ORDER BY ranking_score DESC;
     """
     cursor.execute(chef_sql)
