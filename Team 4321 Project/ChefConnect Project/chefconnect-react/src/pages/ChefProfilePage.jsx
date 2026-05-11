@@ -99,9 +99,9 @@ export default function ChefProfilePage() {
             </div>
           </section>
 
-          {/* Signature Dishes */}
+          {/* Cuisine */}
           <section className={styles.section}>
-            <h2>Signature Dishes</h2>
+            <h2>Cuisine</h2>
             {chef.dishes.length === 0 ? (
               <p className={styles.emptyText}>No dishes listed yet.</p>
             ) : (

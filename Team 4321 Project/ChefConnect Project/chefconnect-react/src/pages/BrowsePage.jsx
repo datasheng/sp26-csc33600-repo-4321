@@ -10,7 +10,7 @@ const CUISINES = [
 export default function BrowsePage() {
   const [activeFilter, setActiveFilter] = useState('All');
   const [query, setQuery]               = useState('');
-  const [serviceType, setServiceType]   = useState('Cuisine Chef');
+  const [serviceType, setServiceType]   = useState('All');
 
   const [chefs, setChefs]     = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,10 +33,17 @@ export default function BrowsePage() {
   const filtered = chefs.filter(chef => {
     const matchesCuisine = activeFilter === 'All' ||
       chef.tags.some(t => t.toLowerCase().includes(activeFilter.toLowerCase()));
-    const matchesQuery = query === '' ||
-      chef.name.toLowerCase().includes(query.toLowerCase()) ||
-      chef.tags.some(t => t.toLowerCase().includes(query.toLowerCase()));
-    return matchesCuisine && matchesQuery;
+
+    const matchesServiceType = serviceType === 'All' ||
+      chef.tags.some(t => t.toLowerCase() === serviceType.toLowerCase());
+
+    const q = query.toLowerCase();
+    const matchesQuery = q === '' ||
+      chef.name.toLowerCase().includes(q) ||
+      chef.tags.some(t => t.toLowerCase().includes(q)) ||
+      chef.dishes.some(d => d.toLowerCase().includes(q));
+
+    return matchesCuisine && matchesServiceType && matchesQuery;
   });
 
   return (
@@ -56,8 +63,9 @@ export default function BrowsePage() {
 
           <div className={styles.searchBar}>
             <select value={serviceType} onChange={e => setServiceType(e.target.value)}>
-              <option>Cuisine Chef</option>
-              <option>Pantry Chef</option>
+              <option value="All">All Chefs</option>
+              <option value="Cuisine Chef">Cuisine Chef</option>
+              <option value="Pantry Chef">Pantry Chef</option>
             </select>
             <input
               type="text"

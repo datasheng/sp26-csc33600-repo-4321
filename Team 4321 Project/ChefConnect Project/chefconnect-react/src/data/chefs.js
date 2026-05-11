@@ -90,6 +90,11 @@ function mergeChef(apiChef) {
     ? specialty.split(',').map(t => t.trim()).filter(Boolean)
     : ['Chef'];
 
+  // dish_names comes from GET /chefs as a comma-separated string
+  const apiDishNames = apiChef.dish_names
+    ? apiChef.dish_names.split(',').map(d => d.trim()).filter(Boolean)
+    : [];
+
   return {
     id,
     name,
@@ -104,7 +109,7 @@ function mergeChef(apiChef) {
     badge:        sup.badge          ?? null,
     experience:   sup.experience     ?? 0,
     tags:         sup.tags           ?? defaultTags,
-    dishes:       [],
+    dishes:       apiDishNames,
     availability: DAY_ORDER.map(day => ({ day, hours: null })),
     reviews:      [],
   };

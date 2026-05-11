@@ -7,7 +7,7 @@ const NAV_ITEMS = [
   { icon: '📅', label: 'My Bookings' },
   { icon: '🧑‍🍳', label: 'My Profile' },
   { icon: '🕐', label: 'My Availability' },
-  { icon: '🍽️', label: 'My Menu' },
+  { icon: '🍽️', label: 'My Cuisine' },
   { icon: '⭐', label: 'My Reviews' },
 ];
 
@@ -58,15 +58,17 @@ export default function ChefDashboardPage({ user }) {
         setChefProfile(myChef);
         const chefId = myChef.chef_id;
 
-        const [bookRes, revRes, dishRes] = await Promise.all([
+        const [bookRes, revRes, dishRes, availRes] = await Promise.all([
           fetch(`http://localhost:8000/chefs/${chefId}/bookings`).then(r => r.json()),
           fetch(`http://localhost:8000/chefs/${chefId}/reviews`).then(r => r.json()),
           fetch(`http://localhost:8000/chefs/${chefId}/dishes`).then(r => r.json()),
+          fetch(`http://localhost:8000/chefs/${chefId}/availability`).then(r => r.json()),
         ]);
 
         setBookings(bookRes.bookings ?? []);
         setReviews(revRes.reviews ?? []);
         setDishes(dishRes.dishes ?? []);
+        setAvailability(availRes.availability ?? []);
       }
     } catch (e) {
       console.error(e);
@@ -112,26 +114,46 @@ export default function ChefDashboardPage({ user }) {
 
     switch (activeNav) {
       case 'My Bookings':
-        return <BookingsPanel bookings={bookings} onStatus={handleBookingStatus} />;
+        return <BookingsPanel bookings={bookings} onStatus={handleBookingStatus} pantriesByBooking={pantriesByBooking} fetchPantryForBooking={fetchPantryForBooking} />;
       case 'My Profile':
-        return <ProfilePanel user={user} chef={chefProfile} onSave={(bio, specialty) => {
+        return <ProfilePanel user={user} chef={chefProfile} onSave={(bio, specialty, hourlyRate) => {
           if (chefProfile) {
-            fetch(`http://localhost:8000/chefs/${chefProfile.chef_id}/profile?bio=${encodeURIComponent(bio)}&specialty=${encodeURIComponent(specialty)}`, { method: 'PUT' })
+            const url = `http://localhost:8000/chefs/${chefProfile.chef_id}/profile` +
+              `?user_id=${user.user_id}` +
+              `&bio=${encodeURIComponent(bio)}` +
+              `&specialty=${encodeURIComponent(specialty)}` +
+              (hourlyRate ? `&hourly_rate=${encodeURIComponent(hourlyRate)}` : '');
+            fetch(url, { method: 'PUT' })
               .then(() => { setToast('Profile updated!'); loadAll(); })
               .catch(() => setToast('Could not save profile.'));
           }
         }} />;
       case 'My Availability':
         return <AvailabilityPanel availability={availability} chefId={chefProfile?.chef_id} onAdd={(day, start, end) => {
-          fetch(`http://localhost:8000/chefs/${chefProfile.chef_id}/availability?day_of_week=${encodeURIComponent(day)}&start_time=${encodeURIComponent(start)}&end_time=${encodeURIComponent(end)}`, { method: 'POST' })
-            .then(() => { setToast('Availability added!'); })
+          fetch(`http://localhost:8000/chefs/${chefProfile.chef_id}/availability?day_of_week=${encodeURIComponent(day)}&start_time=${encodeURIComponent(start)}&end_time=${encodeURIComponent(end)}&user_id=${user.user_id}`, { method: 'POST' })
+            .then(() => { setToast('Availability added!'); loadAll(); })
             .catch(() => setToast('Could not add availability.'));
         }} />;
-      case 'My Menu':
-        return <MenuPanel dishes={dishes} chefId={chefProfile?.chef_id} onAdd={(name, desc, price) => {
-          fetch(`http://localhost:8000/chefs/${chefProfile.chef_id}/dishes?dish_name=${encodeURIComponent(name)}&description=${encodeURIComponent(desc)}&price=${price}`, { method: 'POST' })
-            .then(() => { setToast('Dish added!'); loadAll(); })
-            .catch(() => setToast('Could not add dish.'));
+      case 'My Cuisine':
+        return <MenuPanel dishes={dishes} chefId={chefProfile?.chef_id} onAdd={async (name, desc, price) => {
+          try {
+            const res = await fetch(
+              `http://localhost:8000/chefs/${chefProfile.chef_id}/dishes` +
+              `?dish_name=${encodeURIComponent(name)}` +
+              `&description=${encodeURIComponent(desc)}` +
+              `&price=${price}`,
+              { method: 'POST' }
+            );
+            const data = await res.json();
+            if (data.dish_id) {
+              setToast('Dish added!');
+              await loadAll();
+            } else {
+              setToast(data.detail || 'Could not add dish.');
+            }
+          } catch {
+            setToast('Could not add dish.');
+          }
         }} />;
       case 'My Reviews':
         return <ReviewsPanel reviews={reviews} />;
@@ -290,14 +312,18 @@ function BookingsPanel({ bookings, onStatus, pantriesByBooking = {}, fetchPantry
 
 /* ── Profile ── */
 function ProfilePanel({ user, chef, onSave }) {
-  const [bio, setBio]           = useState(chef?.bio ?? '');
-  const [specialty, setSpecialty] = useState(chef?.specialty ?? '');
+  const [bio, setBio]               = useState(chef?.bio ?? '');
+  const [specialty, setSpecialty]   = useState(chef?.specialty ?? '');
+  const [hourlyRate, setHourlyRate] = useState(chef?.hourly_rate ?? '');
+
   useEffect(() => {
     if (chef) {
       setBio(chef.bio ?? '');
       setSpecialty(chef.specialty ?? '');
+      setHourlyRate(chef.hourly_rate ?? '');
     }
   }, [chef]);
+
   const tags = specialty.split(',').map(t => t.trim()).filter(Boolean);
 
   function toggleTag(tag) {
@@ -310,7 +336,18 @@ function ProfilePanel({ user, chef, onSave }) {
     <>
       <div className={styles.panelHeader}>
         <h1>My Profile</h1>
-        <p>Update your bio and cuisine specialties.</p>
+        <p>Update your bio, specialties, and rate.</p>
+      </div>
+
+      {/* Identity card — read-only */}
+      <div className={styles.formCard}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+          <div style={{ fontSize: '3rem', lineHeight: 1 }}>{chef?.avatar ?? '🧑‍🍳'}</div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '1.15rem' }}>{user?.username ?? '—'}</div>
+            <div style={{ color: '#666', fontSize: '0.9rem' }}>{user?.email ?? '—'}</div>
+          </div>
+        </div>
       </div>
 
       <div className={styles.formCard}>
@@ -331,8 +368,21 @@ function ProfilePanel({ user, chef, onSave }) {
           </div>
         </div>
 
+        <div className={styles.formGroup}>
+          <label>Hourly rate ($)</label>
+          <input
+            className={styles.formInput}
+            type="number"
+            min="1"
+            step="0.01"
+            value={hourlyRate}
+            onChange={e => setHourlyRate(e.target.value)}
+            placeholder="e.g. 45.00"
+          />
+        </div>
+
         <div className={styles.formActions}>
-          <button className={styles.savePrimary} onClick={() => onSave(bio, specialty)}>Save changes</button>
+          <button className={styles.savePrimary} onClick={() => onSave(bio, specialty, hourlyRate)}>Save changes</button>
         </div>
       </div>
     </>
@@ -340,10 +390,19 @@ function ProfilePanel({ user, chef, onSave }) {
 }
 
 /* ── Availability ── */
-function AvailabilityPanel({ chefId, onAdd }) {
+function AvailabilityPanel({ availability, chefId, onAdd }) {
   const [day, setDay]     = useState('Monday');
   const [start, setStart] = useState('09:00');
   const [end, setEnd]     = useState('17:00');
+
+  function formatTime(t) {
+    if (typeof t === 'number') {
+      const h = Math.floor(t / 3600);
+      const m = Math.floor((t % 3600) / 60);
+      return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+    }
+    return typeof t === 'string' ? t.slice(0, 5) : t;
+  }
 
   function submit() {
     onAdd(day, start + ':00', end + ':00');
@@ -377,6 +436,23 @@ function AvailabilityPanel({ chefId, onAdd }) {
           <button className={styles.savePrimary} onClick={submit}>Add availability</button>
         </div>
       </div>
+
+      {availability && availability.length > 0 && (
+        <>
+          <div className={styles.sectionHead} style={{ marginTop: '2rem' }}>
+            <p className={styles.tableLabel}>Current schedule</p>
+            <span className={styles.countPill}>{availability.length}</span>
+          </div>
+          <div className={styles.formCard}>
+            {availability.map(slot => (
+              <div key={slot.availability_id} className={styles.settingsRow} style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span><strong>{slot.day_of_week}</strong></span>
+                <span>{formatTime(slot.start_time)} – {formatTime(slot.end_time)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </>
   );
 }
@@ -396,7 +472,7 @@ function MenuPanel({ dishes, onAdd }) {
   return (
     <>
       <div className={styles.panelHeader}>
-        <h1>My Menu</h1>
+        <h1>My Cuisine</h1>
         <p>Add dishes customers can request when booking you.</p>
       </div>
 
@@ -555,7 +631,7 @@ function BookingCard({ booking, onStatus, pantry, onLoadPantry }) {
               <button className={styles.btnAccept} onClick={() => onStatus(booking.booking_id, 'accepted')}>Accept</button>
               <button className={styles.btnDecline} onClick={() => onStatus(booking.booking_id, 'declined')}>Decline</button>
             </>}
-            {booking.status === 'accepted' && (
+            {(booking.status === 'accepted' || booking.status === 'pending') && (
               <button className={styles.btnDecline} onClick={() => onStatus(booking.booking_id, 'cancelled')}>Cancel</button>
             )}
           </div>
