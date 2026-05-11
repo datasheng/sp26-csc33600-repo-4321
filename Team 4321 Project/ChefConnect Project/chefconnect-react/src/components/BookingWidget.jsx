@@ -11,7 +11,6 @@ const SERVICE_OPTIONS = [
 ];
 
 function formatDate(dt) {
-  // dt is a "datetime-local" string like "2026-05-12T18:30"
   const d = new Date(dt);
   if (Number.isNaN(d.getTime())) return '';
   return d.toLocaleDateString('en-US', {
@@ -22,9 +21,7 @@ function formatDate(dt) {
 function formatTime(dt) {
   const d = new Date(dt);
   if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleTimeString('en-US', {
-    hour: 'numeric', minute: '2-digit',
-  });
+  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
 function makeReferenceId() {
@@ -40,6 +37,7 @@ export default function BookingWidget({ chef }) {
   const [address, setAddress]               = useState('');
   const [specialRequest, setSpecialRequest] = useState('');
   const [error, setError]                   = useState('');
+  const [loading, setLoading]               = useState(false);
 
   const rate       = chef?.price ?? 85;
   const subtotal   = rate * hours;
@@ -200,8 +198,8 @@ export default function BookingWidget({ chef }) {
           </div>
         </div>
 
-        <button type="submit" className={styles.bookBtn}>
-          Confirm Booking →
+        <button type="submit" className={styles.bookBtn} disabled={loading}>
+          {loading ? 'Booking…' : 'Confirm Booking →'}
         </button>
       </form>
     </aside>

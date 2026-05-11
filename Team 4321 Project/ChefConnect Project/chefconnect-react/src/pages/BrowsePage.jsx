@@ -31,12 +31,19 @@ export default function BrowsePage() {
   }, [loadChefs]);
 
   const filtered = chefs.filter(chef => {
+    const hasPantryTag  = chef.tags.some(t => t.toLowerCase() === 'pantry chef');
+    const hasCuisineTag = chef.tags.some(t => t.toLowerCase() === 'cuisine chef');
+    const matchesService =
+      serviceType === 'Pantry Chef'
+        ? hasPantryTag
+        : !hasPantryTag || hasCuisineTag;   // Cuisine Chef: anyone who isn't exclusively a pantry chef
+
     const matchesCuisine = activeFilter === 'All' ||
       chef.tags.some(t => t.toLowerCase().includes(activeFilter.toLowerCase()));
     const matchesQuery = query === '' ||
       chef.name.toLowerCase().includes(query.toLowerCase()) ||
       chef.tags.some(t => t.toLowerCase().includes(query.toLowerCase()));
-    return matchesCuisine && matchesQuery;
+    return matchesService && matchesCuisine && matchesQuery;
   });
 
   return (

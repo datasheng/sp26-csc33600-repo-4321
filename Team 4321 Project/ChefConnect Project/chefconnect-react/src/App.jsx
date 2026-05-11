@@ -17,13 +17,26 @@ export default function App() {
   const [user, setUser] = useState(() => {
     try {
       const stored = localStorage.getItem('user');
-      return stored ? JSON.parse(stored) : null;
+      if (!stored) return null;
+      const parsed = JSON.parse(stored);
+      if (!parsed.initials) parsed.initials = computeInitials(parsed.username);
+      return parsed;
     } catch { return null; }
   });
 
+  function computeInitials(username) {
+    return (username ?? '')
+      .split(/[\s_.]/)
+      .filter(Boolean)
+      .map(part => part[0].toUpperCase())
+      .slice(0, 2)
+      .join('') || '?';
+  }
+
   function handleLogin(userData) {
-    localStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
+    const enriched = { ...userData, initials: computeInitials(userData.username) };
+    localStorage.setItem('user', JSON.stringify(enriched));
+    setUser(enriched);
   }
 
   function handleLogout() {
