@@ -79,24 +79,21 @@ export default function DashboardPage( { user }) {
       .then(r => r.json())
       .then(data => {
         const raw = Array.isArray(data) ? data : (data.bookings ?? []);
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const normalized = raw.map(b => ({
-          id:       b.booking_id,
-          chefId:   b.chef_id,
-          chef:     b.chef_name,
-          date:     b.booking_date,
-          time:     b.booking_time,
-          status:   b.status,
-          upcoming: new Date(b.booking_date) >= today && b.status !== 'cancelled',
-          emoji:    '🧑‍🍳',
-          cuisine:  b.customer_requests ?? '',
-          amount:   0,
-          reviewed: false,
-        }));
-        setBookings(normalized);
-        setLoading(false);
-      })
+        const mapped = raw.map(b => ({
+         ...b,
+        id:       b.booking_id,
+        chef:     b.chef_name,
+       date:     b.booking_date,
+       time:     typeof b.booking_time === 'string' ? b.booking_time.slice(0,5) : '',
+       amount:   0,
+       upcoming: b.status === 'pending' || b.status === 'accepted',
+       reviewed: false,
+        emoji:    '🧑‍🍳',
+        cuisine:  '',
+      }));
+  setBookings(mapped);
+  setLoading(false);
+})
       .catch(() => {
         setBookings([]);
         setLoading(false);
@@ -106,7 +103,28 @@ export default function DashboardPage( { user }) {
   /* Scroll to top when switching panels */
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'auto' });
-  }, [activeNav]);
+    if ((activeNav === 'My Bookings' || activeNav === 'Dashboard') && user) { //to refresh booking whenever user goes back to dashboard or bookings panel
+    fetch(`http://localhost:8000/users/${user.user_id}/bookings`)
+      .then(r => r.json())
+      .then(data => {
+        const raw = Array.isArray(data) ? data : (data.bookings ?? []);
+        const mapped = raw.map(b => ({
+          ...b,
+          id:       b.booking_id,
+          chef:     b.chef_name,
+          date:     b.booking_date,
+          time:     typeof b.booking_time === 'string' ? b.booking_time.slice(0,5) : '',
+          amount:   0,
+          upcoming: b.status === 'pending' || b.status === 'accepted',
+          reviewed: false,
+          emoji:    '🧑‍🍳',
+          cuisine:  '',
+        }));
+        setBookings(mapped);
+      })
+      .catch(() => {});
+  }
+}, [activeNav, user]);
 
   /* Auto-dismiss toast */
   useEffect(() => {

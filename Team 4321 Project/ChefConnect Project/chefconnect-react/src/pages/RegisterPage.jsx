@@ -100,7 +100,10 @@ export default function RegisterPage({ onLogin }) {
       }
  
       const data = await res.json();
-      const chefId = data.user_id;
+      const chefsRes = await fetch('http://localhost:8000/chefs'); //To find the chef id after registration
+      const chefsData = await chefsRes.json();
+      const myChef = (chefsData.chefs ?? []).find(c => c.username === form.username);
+      const chefId = myChef?.chef_id ?? data.user_id;
  
       // 2. Update chef profile (bio + specialty)
       if (form.bio || selectedTags.length > 0) {
