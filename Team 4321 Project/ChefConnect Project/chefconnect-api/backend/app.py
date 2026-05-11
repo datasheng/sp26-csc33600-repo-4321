@@ -21,6 +21,105 @@ def get_db_connection():
         database="chefconnection_db"
     )
 
+
+def create_stored_procedures():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("DROP PROCEDURE IF EXISTS GetChefListings")
+    cursor.execute("""
+        CREATE PROCEDURE GetChefListings()
+        BEGIN
+            SELECT
+                Chef.chef_id,
+                User.user_id,
+                User.username,
+                User.email,
+                Chef.bio,
+                Chef.specialty,
+                Chef.rating,
+                Chef.avatar,
+                Chef.hourly_rate,
+                (SELECT COUNT(*) FROM Review WHERE Review.chef_id = Chef.chef_id) AS review_count,
+                (SELECT GROUP_CONCAT(dish_name ORDER BY dish_name SEPARATOR ',')
+                 FROM Dish WHERE Dish.chef_id = Chef.chef_id) AS dish_names,
+                CASE
+                    WHEN ChefMembership.end_date >= CURDATE() THEN 1
+                    ELSE 0
+                END AS has_membership,
+                (
+                    COALESCE(Chef.rating, 0) +
+                    CASE
+                        WHEN ChefMembership.end_date >= CURDATE() THEN 0.5
+                        ELSE 0
+                    END
+                ) AS ranking_score
+            FROM Chef
+            JOIN User ON Chef.user_id = User.user_id
+            LEFT JOIN ChefMembership ON Chef.chef_id = ChefMembership.chef_id
+            ORDER BY ranking_score DESC;
+        END
+    """)
+
+    cursor.execute("DROP PROCEDURE IF EXISTS SubmitReview")
+    cursor.execute("""
+        CREATE PROCEDURE SubmitReview(
+            IN p_chef_id INT,
+            IN p_user_id INT,
+            IN p_rating  INT,
+            IN p_comment TEXT
+        )
+        BEGIN
+            DECLARE EXIT HANDLER FOR SQLEXCEPTION
+            BEGIN
+                ROLLBACK;
+                RESIGNAL;
+            END;
+
+            START TRANSACTION;
+
+            INSERT INTO Review (chef_id, user_id, rating, comment)
+            VALUES (p_chef_id, p_user_id, p_rating, p_comment);
+
+            UPDATE Chef
+            SET rating = (
+                SELECT AVG(rating)
+                FROM Review
+                WHERE chef_id = p_chef_id
+            )
+            WHERE chef_id = p_chef_id;
+
+            COMMIT;
+        END
+    """)
+
+    conn.commit()
+    cursor.close()
+    conn.close()
+
+
+def add_column_if_missing(cursor, table, column, definition):
+    cursor.execute(
+        "SELECT COUNT(*) FROM information_schema.columns "
+        "WHERE table_schema = 'chefconnection_db' AND table_name = %s AND column_name = %s",
+        (table, column)
+    )
+    if cursor.fetchone()[0] == 0:
+        cursor.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+
+@app.on_event("startup")
+def startup_event():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    add_column_if_missing(cursor, "Chef", "avatar",      "VARCHAR(20) DEFAULT NULL")
+    add_column_if_missing(cursor, "Chef", "hourly_rate", "DECIMAL(10,2) DEFAULT NULL")
+    conn.commit()
+    cursor.close()
+    conn.close()
+    create_stored_procedures()
+
+
 @app.get("/")
 def home():
     return {"message": "Welcome to Chef Connection!"}
@@ -156,35 +255,13 @@ def login(username: str, password: str):
 @app.get("/chefs")
 def get_chefs():
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-    chef_sql = """
-    SELECT
-        Chef.chef_id,
-        User.username,
-        Chef.bio,
-        Chef.specialty,
-        Chef.rating,
-        (SELECT COUNT(*) FROM Review WHERE Review.chef_id = Chef.chef_id) AS review_count,
-        (SELECT GROUP_CONCAT(dish_name ORDER BY dish_name SEPARATOR ',')
-         FROM Dish WHERE Dish.chef_id = Chef.chef_id) AS dish_names,
-        CASE
-            WHEN ChefMembership.end_date >= CURDATE() THEN 1
-            ELSE 0
-        END AS has_membership,
-        (
-            COALESCE(Chef.rating, 0) +
-            CASE
-                WHEN ChefMembership.end_date >= CURDATE() THEN 0.5
-                ELSE 0
-            END
-        ) AS ranking_score
-    FROM Chef
-    JOIN User ON Chef.user_id = User.user_id
-    LEFT JOIN ChefMembership ON Chef.chef_id = ChefMembership.chef_id
-    ORDER BY ranking_score DESC;
-    """
-    cursor.execute(chef_sql)
-    chefs = cursor.fetchall()
+    cursor = conn.cursor()
+    cursor.callproc("GetChefListings")
+    chefs = []
+    for result in cursor.stored_results():
+        cols = [d[0] for d in result.description]
+        for row in result.fetchall():
+            chefs.append(dict(zip(cols, row)))
     cursor.close()
     conn.close()
     return {"chefs": chefs}
@@ -194,7 +271,9 @@ def update_chef_profile(
     chef_id: int,
     user_id: int,
     bio: str = None,
-    specialty: str = None
+    specialty: str = None,
+    avatar: str = None,
+    hourly_rate: float = None
     ):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -208,11 +287,13 @@ def update_chef_profile(
     sql = """
     UPDATE Chef
     SET bio = %s,
-        specialty = %s
+        specialty = %s,
+        avatar = COALESCE(%s, avatar),
+        hourly_rate = COALESCE(%s, hourly_rate)
     WHERE chef_id = %s
     """
 
-    cursor.execute(sql, (bio, specialty, chef_id))
+    cursor.execute(sql, (bio, specialty, avatar, hourly_rate, chef_id))
     conn.commit()
 
     cursor.close()
@@ -332,6 +413,46 @@ def create_booking(
     }
 
 
+@app.put("/bookings/{booking_id}/reschedule")
+def reschedule_booking(booking_id: int, user_id: int, booking_date: str, booking_time: str):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Verify the booking belongs to this customer and is still reschedule-able
+    cursor.execute(
+        "SELECT chef_id FROM Booking WHERE booking_id = %s AND user_id = %s AND status IN ('pending', 'accepted')",
+        (booking_id, user_id)
+    )
+    row = cursor.fetchone()
+    if not row:
+        cursor.close()
+        conn.close()
+        return {"error": "Booking not found or cannot be rescheduled."}
+
+    chef_id = row["chef_id"]
+
+    # Make sure the new slot isn't already taken by the same chef
+    cursor.execute(
+        """SELECT booking_id FROM Booking
+           WHERE chef_id = %s AND booking_date = %s AND booking_time = %s
+           AND booking_id != %s AND status IN ('pending', 'accepted')""",
+        (chef_id, booking_date, booking_time, booking_id)
+    )
+    if cursor.fetchone():
+        cursor.close()
+        conn.close()
+        return {"error": "That time slot is already booked for this chef."}
+
+    cursor.execute(
+        "UPDATE Booking SET booking_date = %s, booking_time = %s, status = 'pending' WHERE booking_id = %s",
+        (booking_date, booking_time, booking_id)
+    )
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return {"message": "Booking rescheduled successfully!"}
+
+
 @app.put("/bookings/{booking_id}/status")
 def update_booking_status(booking_id: int, status: str, user_id: int):
     conn = get_db_connection()
@@ -346,8 +467,10 @@ def update_booking_status(booking_id: int, status: str, user_id: int):
 
     if status == "cancelled":
         cursor.execute(
-            "SELECT booking_id FROM Booking WHERE booking_id = %s AND user_id = %s",
-            (booking_id, user_id)
+            """SELECT b.booking_id FROM Booking b
+               LEFT JOIN Chef c ON b.chef_id = c.chef_id
+               WHERE b.booking_id = %s AND (b.user_id = %s OR c.user_id = %s)""",
+            (booking_id, user_id, user_id)
         )
         if not cursor.fetchone():
             cursor.close()
@@ -546,28 +669,9 @@ def create_review(
     comment: str = None
 ):
     conn = get_db_connection()
-    cursor = conn.cursor(dictionary=True)
-
-    review_sql = """
-    INSERT INTO Review 
-    (chef_id, user_id, rating, comment)
-    VALUES (%s, %s, %s, %s)
-    """
-
-    cursor.execute(review_sql, (chef_id, user_id, rating, comment))
-
-    update_sql = """
-    UPDATE Chef
-    SET rating = (
-        SELECT AVG(rating) 
-        FROM Review 
-        WHERE chef_id = %s
-    )
-    WHERE chef_id = %s
-    """
-    cursor.execute(update_sql, (chef_id, chef_id))
+    cursor = conn.cursor()
+    cursor.callproc("SubmitReview", [chef_id, user_id, rating, comment])
     conn.commit()
-
     cursor.close()
     conn.close()
     return {"message": "Review submitted successfully!"}

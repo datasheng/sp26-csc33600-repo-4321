@@ -116,17 +116,22 @@ export default function ChefDashboardPage({ user }) {
       case 'My Bookings':
         return <BookingsPanel bookings={bookings} onStatus={handleBookingStatus} pantriesByBooking={pantriesByBooking} fetchPantryForBooking={fetchPantryForBooking} />;
       case 'My Profile':
-        return <ProfilePanel user={user} chef={chefProfile} onSave={(bio, specialty) => {
+        return <ProfilePanel user={user} chef={chefProfile} onSave={(bio, specialty, hourlyRate) => {
           if (chefProfile) {
-            fetch(`http://localhost:8000/chefs/${chefProfile.chef_id}/profile?bio=${encodeURIComponent(bio)}&specialty=${encodeURIComponent(specialty)}`, { method: 'PUT' })
+            const url = `http://localhost:8000/chefs/${chefProfile.chef_id}/profile` +
+              `?user_id=${user.user_id}` +
+              `&bio=${encodeURIComponent(bio)}` +
+              `&specialty=${encodeURIComponent(specialty)}` +
+              (hourlyRate ? `&hourly_rate=${encodeURIComponent(hourlyRate)}` : '');
+            fetch(url, { method: 'PUT' })
               .then(() => { setToast('Profile updated!'); loadAll(); })
               .catch(() => setToast('Could not save profile.'));
           }
         }} />;
       case 'My Availability':
         return <AvailabilityPanel availability={availability} chefId={chefProfile?.chef_id} onAdd={(day, start, end) => {
-          fetch(`http://localhost:8000/chefs/${chefProfile.chef_id}/availability?day_of_week=${encodeURIComponent(day)}&start_time=${encodeURIComponent(start)}&end_time=${encodeURIComponent(end)}`, { method: 'POST' })
-            .then(() => { setToast('Availability added!'); })
+          fetch(`http://localhost:8000/chefs/${chefProfile.chef_id}/availability?day_of_week=${encodeURIComponent(day)}&start_time=${encodeURIComponent(start)}&end_time=${encodeURIComponent(end)}&user_id=${user.user_id}`, { method: 'POST' })
+            .then(() => { setToast('Availability added!'); loadAll(); })
             .catch(() => setToast('Could not add availability.'));
         }} />;
       case 'My Cuisine':
@@ -307,14 +312,18 @@ function BookingsPanel({ bookings, onStatus, pantriesByBooking = {}, fetchPantry
 
 /* ── Profile ── */
 function ProfilePanel({ user, chef, onSave }) {
-  const [bio, setBio]           = useState(chef?.bio ?? '');
-  const [specialty, setSpecialty] = useState(chef?.specialty ?? '');
+  const [bio, setBio]               = useState(chef?.bio ?? '');
+  const [specialty, setSpecialty]   = useState(chef?.specialty ?? '');
+  const [hourlyRate, setHourlyRate] = useState(chef?.hourly_rate ?? '');
+
   useEffect(() => {
     if (chef) {
       setBio(chef.bio ?? '');
       setSpecialty(chef.specialty ?? '');
+      setHourlyRate(chef.hourly_rate ?? '');
     }
   }, [chef]);
+
   const tags = specialty.split(',').map(t => t.trim()).filter(Boolean);
 
   function toggleTag(tag) {
@@ -327,7 +336,18 @@ function ProfilePanel({ user, chef, onSave }) {
     <>
       <div className={styles.panelHeader}>
         <h1>My Profile</h1>
-        <p>Update your bio and cuisine specialties.</p>
+        <p>Update your bio, specialties, and rate.</p>
+      </div>
+
+      {/* Identity card — read-only */}
+      <div className={styles.formCard}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+          <div style={{ fontSize: '3rem', lineHeight: 1 }}>{chef?.avatar ?? '🧑‍🍳'}</div>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '1.15rem' }}>{user?.username ?? '—'}</div>
+            <div style={{ color: '#666', fontSize: '0.9rem' }}>{user?.email ?? '—'}</div>
+          </div>
+        </div>
       </div>
 
       <div className={styles.formCard}>
@@ -348,8 +368,21 @@ function ProfilePanel({ user, chef, onSave }) {
           </div>
         </div>
 
+        <div className={styles.formGroup}>
+          <label>Hourly rate ($)</label>
+          <input
+            className={styles.formInput}
+            type="number"
+            min="1"
+            step="0.01"
+            value={hourlyRate}
+            onChange={e => setHourlyRate(e.target.value)}
+            placeholder="e.g. 45.00"
+          />
+        </div>
+
         <div className={styles.formActions}>
-          <button className={styles.savePrimary} onClick={() => onSave(bio, specialty)}>Save changes</button>
+          <button className={styles.savePrimary} onClick={() => onSave(bio, specialty, hourlyRate)}>Save changes</button>
         </div>
       </div>
     </>
@@ -598,7 +631,7 @@ function BookingCard({ booking, onStatus, pantry, onLoadPantry }) {
               <button className={styles.btnAccept} onClick={() => onStatus(booking.booking_id, 'accepted')}>Accept</button>
               <button className={styles.btnDecline} onClick={() => onStatus(booking.booking_id, 'declined')}>Decline</button>
             </>}
-            {booking.status === 'accepted' && (
+            {(booking.status === 'accepted' || booking.status === 'pending') && (
               <button className={styles.btnDecline} onClick={() => onStatus(booking.booking_id, 'cancelled')}>Cancel</button>
             )}
           </div>

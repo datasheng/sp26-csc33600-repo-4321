@@ -50,10 +50,11 @@ export default function DashboardPage( { user }) {
   const [notifs,         setNotifs]        = useState(SEED_NOTIFS);
 
   // UI state
-  const [loading,     setLoading]     = useState(true);
-  const [error,       setError]       = useState('');
-  const [toast,       setToast]       = useState('');
-  const [reviewModal, setReviewModal] = useState(null);
+  const [loading,          setLoading]          = useState(true);
+  const [error,            setError]            = useState('');
+  const [toast,            setToast]            = useState('');
+  const [reviewModal,      setReviewModal]      = useState(null);
+  const [rescheduleModal,  setRescheduleModal]  = useState(null);
 
  useEffect(() => {
     if (!user) return;
@@ -186,8 +187,42 @@ export default function DashboardPage( { user }) {
       .catch(() => setToast('Could not cancel booking. Please try again.'));
   }
 
-  function handleReschedule() {
-    setToast('Rescheduling will open once the backend is connected.');
+  function handleOpenReschedule(booking) {
+    setRescheduleModal({ bookingId: booking.id, currentDate: booking.date, currentTime: booking.time });
+  }
+
+  async function handleSubmitReschedule({ date, time }) {
+    if (!rescheduleModal) return;
+    try {
+      const res = await fetch(
+        `http://localhost:8000/bookings/${rescheduleModal.bookingId}/reschedule` +
+        `?user_id=${user.user_id}` +
+        `&booking_date=${encodeURIComponent(date)}` +
+        `&booking_time=${encodeURIComponent(time + ':00')}`,
+        { method: 'PUT' }
+      );
+      const data = await res.json();
+      if (data.error) { setToast(data.error); return; }
+      setRescheduleModal(null);
+      setToast('Booking rescheduled!');
+      // Re-fetch bookings so the dashboard reflects the new date/time
+      const fresh = await fetch(`http://localhost:8000/users/${user.user_id}/bookings`).then(r => r.json());
+      const raw = Array.isArray(fresh) ? fresh : (fresh.bookings ?? []);
+      setBookings(raw.map(b => ({
+        ...b,
+        id:       b.booking_id,
+        chef:     b.chef_name,
+        date:     b.booking_date,
+        time:     typeof b.booking_time === 'string' ? b.booking_time.slice(0,5) : '',
+        amount:   parseFloat(b.total_amount) || 0,
+        upcoming: b.status === 'pending' || b.status === 'accepted',
+        reviewed: false,
+        emoji:    '🧑‍🍳',
+        cuisine:  '',
+      })));
+    } catch {
+      setToast('Could not reschedule. Please try again.');
+    }
   }
 
   function handleOpenReview(booking) {
@@ -304,7 +339,7 @@ async function handleRemovePantryItem(pantryId) {
 
     switch (activeNav) {
       case 'My Bookings':
-        return <BookingsPanel bookings={bookings} onCancel={handleCancel} onReschedule={handleReschedule} onLeaveReview={handleOpenReview} />;
+        return <BookingsPanel bookings={bookings} onCancel={handleCancel} onReschedule={handleOpenReschedule} onLeaveReview={handleOpenReview} />;
       case 'Pantry Profile':
        return <PantryPanel pantry={pantry} onAdd={handleAddPantryItem} onRemove={handleRemovePantryItem} />;
       case 'My Reviews':
@@ -315,7 +350,7 @@ async function handleRemovePantryItem(pantryId) {
         return <SettingsPanel user={user} notifs={notifs} toggleNotif={toggleNotif} onSave={saveSettings} onEditField={notImplemented} />;
       case 'Dashboard':
       default:
-        return <OverviewPanel user={user} bookings={bookings} onCancel={handleCancel} onReschedule={handleReschedule} onLeaveReview={handleOpenReview} />;
+        return <OverviewPanel user={user} bookings={bookings} onCancel={handleCancel} onReschedule={handleOpenReschedule} onLeaveReview={handleOpenReview} />;
     }
   }
 
@@ -356,6 +391,15 @@ async function handleRemovePantryItem(pantryId) {
         />
       )}
 
+      {rescheduleModal && (
+        <RescheduleModal
+          currentDate={rescheduleModal.currentDate}
+          currentTime={rescheduleModal.currentTime}
+          onClose={() => setRescheduleModal(null)}
+          onSubmit={handleSubmitReschedule}
+        />
+      )}
+
       {toast && <div className={styles.toast} role="status">{toast}</div>}
     </main>
   );
@@ -377,9 +421,8 @@ function OverviewPanel({ user, bookings, onCancel, onReschedule, onLeaveReview }
   const past     = bookings.filter(b => !b.upcoming);
 
   const stats = [
-    { label: 'Total Bookings', value: bookings.length,                                          sub: '' },
-    { label: 'Total Spent',    value: `$${bookings.reduce((s,b) => s+(b.amount||0), 0).toFixed(2)}`, sub: '' },
-    { label: 'Reviews Left',   value: bookings.filter(b => b.status==='completed' && !b.reviewed).length, sub: '' },
+    { label: 'Total Bookings', value: bookings.length, sub: '' },
+    { label: 'Total Spent', value: `$${bookings.filter(b => b.status !== 'cancelled' && b.status !== 'declined').reduce((s,b) => s+(b.amount||0), 0).toFixed(2)}`, sub: '' },
   ];
 
   return (
@@ -833,6 +876,57 @@ function PanelError({ message }) {
 /* ──────────────────────────────────────────────────────────────
  * Review Modal
  * ────────────────────────────────────────────────────────────── */
+
+function RescheduleModal({ currentDate, currentTime, onClose, onSubmit }) {
+  const [date, setDate] = useState(currentDate || '');
+  const [time, setTime] = useState(currentTime || '');
+  const [error, setError] = useState('');
+
+  function submit() {
+    if (!date || !time) { setError('Please pick a new date and time.'); return; }
+    onSubmit({ date, time });
+  }
+
+  function handleKey(e) { if (e.key === 'Escape') onClose(); }
+  useEffect(() => {
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  return (
+    <div className={styles.modalOverlay} onClick={onClose}>
+      <div className={styles.modalCard} onClick={e => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="Reschedule booking">
+        <button className={styles.modalClose} onClick={onClose} aria-label="Close">×</button>
+        <span className={styles.modalEyebrow}>Reschedule booking</span>
+        <div className={styles.modalGroup}>
+          <label className={styles.modalLabel}>New date</label>
+          <input
+            type="date"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+            style={{ padding: '0.65rem', borderRadius: '8px', border: '1px solid #ddd', width: '100%', fontSize: '1rem' }}
+          />
+        </div>
+        <div className={styles.modalGroup}>
+          <label className={styles.modalLabel}>New time</label>
+          <input
+            type="time"
+            value={time}
+            onChange={e => setTime(e.target.value)}
+            style={{ padding: '0.65rem', borderRadius: '8px', border: '1px solid #ddd', width: '100%', fontSize: '1rem' }}
+          />
+        </div>
+        {error && <div className={styles.modalError} role="alert">{error}</div>}
+        <div className={styles.modalActions}>
+          <button className={styles.modalCancel} onClick={onClose}>Cancel</button>
+          <button className={styles.modalSubmit} onClick={submit}>Confirm reschedule</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 
 function ReviewModal({ chefName, chefEmoji, bookingDate, onClose, onSubmit }) {
   const [rating,  setRating]  = useState(0);

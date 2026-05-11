@@ -35,9 +35,10 @@ export default function RegisterPage({ onLogin }) {
     email: '',
     password: '',
     bio: '',
+    hourlyRate: '',
     accountHolder: '',
     routingNumber: '',
-   accountNumber: '',
+    accountNumber: '',
     bankName: '',
   });
   const [selectedEmoji, setSelectedEmoji]     = useState('👨‍🍳');
@@ -118,21 +119,21 @@ export default function RegisterPage({ onLogin }) {
       const data = await res.json();
       const chefId = data.chef_id;
  
-      // 2. Update chef profile (bio + specialty)
-      if (form.bio || selectedTags.length > 0) {
-        await fetch(
-          `http://localhost:8000/chefs/${chefId}/profile` +
-          `?user_id=${data.user_id}` +
-          `&bio=${encodeURIComponent(form.bio)}` +
-          `&specialty=${encodeURIComponent(selectedTags.join(', '))}`,
-          { method: 'PUT' }
-        ).catch(() => {});
-      }
+      // 2. Update chef profile (bio + specialty + avatar + hourly rate)
+      await fetch(
+        `http://localhost:8000/chefs/${chefId}/profile` +
+        `?user_id=${data.user_id}` +
+        `&bio=${encodeURIComponent(form.bio)}` +
+        `&specialty=${encodeURIComponent(selectedTags.join(', '))}` +
+        `&avatar=${encodeURIComponent(selectedEmoji)}` +
+        (form.hourlyRate ? `&hourly_rate=${encodeURIComponent(form.hourlyRate)}` : ''),
+        { method: 'PUT' }
+      ).catch(() => {});
  
       // 3. Add availability slots
       for (const [day, times] of Object.entries(availability)) {
         await fetch(
-          `http://localhost:8000/chefs/${chefId}/availability?day_of_week=${encodeURIComponent(day)}&start_time=${encodeURIComponent(times.start + ':00')}&end_time=${encodeURIComponent(times.end + ':00')}`,
+          `http://localhost:8000/chefs/${chefId}/availability?day_of_week=${encodeURIComponent(day)}&start_time=${encodeURIComponent(times.start + ':00')}&end_time=${encodeURIComponent(times.end + ':00')}&user_id=${data.user_id}`,
           { method: 'POST' }
         ).catch(() => {});
       }
@@ -241,6 +242,20 @@ export default function RegisterPage({ onLogin }) {
               />
             </div>
  
+            {/* Hourly Rate */}
+            <div className={styles.group}>
+              <label>Hourly rate ($)</label>
+              <input
+                name="hourlyRate"
+                type="number"
+                min="1"
+                step="0.01"
+                value={form.hourlyRate}
+                onChange={handleChange}
+                placeholder="e.g. 45.00"
+              />
+            </div>
+
             {/* Tags */}
             <div className={styles.group}>
               <label>Cuisine tags</label>
