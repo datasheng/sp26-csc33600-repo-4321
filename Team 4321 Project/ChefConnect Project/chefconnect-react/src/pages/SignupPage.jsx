@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import styles from './SignupPage.module.css';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignupPage() {
   const navigate = useNavigate();
+  const { registerCustomerAccount } = useAuth();
 
   const [form, setForm] = useState({
     name: '',
@@ -46,13 +48,33 @@ export default function SignupPage() {
      * Replace with real fetch when API is ready:
      *
      *   const res = await fetch('/api/auth/signup', {...});
-     *   if (!res.ok) setError('That email is already in use.');
-     *   else navigate('/dashboard');
+     *   if (res.status === 409) setError('That email is already in use.');
+     *   else if (!res.ok)       setError('Sign up failed. Please try again.');
+     *   else navigate('/login', { state: { justSignedUp: { email } } });
+     *
+     * Until then the auth context owns the customer registry
+     * (localStorage-backed) and we bounce to /login on success.
      * ──────────────────────────────────────────────────────── */
     setLoading(true);
     setTimeout(() => {
       setLoading(false);
-      navigate('/dashboard');
+
+      const result = registerCustomerAccount({
+        name:     form.name.trim(),
+        email:    form.email,
+        password: form.password,
+      });
+
+      if (!result.ok) {
+        setError(result.error);
+        return;
+      }
+
+      // Bounce to login with pre-filled email + confirmation banner.
+      // This mirrors the chef flow and proves the gated login works.
+      navigate('/login', {
+        state: { justSignedUp: { email: form.email } },
+      });
     }, 600);
   }
 

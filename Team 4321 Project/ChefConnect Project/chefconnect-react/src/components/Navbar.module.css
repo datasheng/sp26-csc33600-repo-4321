@@ -40,3 +40,119 @@
   gap: 10px;
   align-items: center;
 }
+
+/* ── Signed-in user menu ───────────────────────────────── */
+.userMenu {
+  position: relative;
+}
+.userBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 10px 4px 4px;
+  cursor: pointer;
+  font-family: var(--font-body);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.userBtn:hover {
+  border-color: var(--terracotta);
+}
+.userAvatar {
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--terracotta);
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.3px;
+}
+.userName {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--charcoal);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.userCaret {
+  font-size: 10px;
+  color: var(--muted);
+  margin-right: 2px;
+}
+
+/* Dropdown */
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 220px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(30, 26, 20, 0.12);
+  overflow: hidden;
+  z-index: 110;
+  animation: dropIn 0.16s ease-out;
+}
+@keyframes dropIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.dropdownHeader {
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid var(--border);
+}
+.dropdownHeader strong {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--charcoal);
+  margin-bottom: 2px;
+}
+.dropdownHeader small {
+  display: block;
+  font-size: 10.5px;
+  color: var(--terracotta);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 500;
+}
+.dropdownItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: none;
+  padding: 10px 16px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  color: var(--bark);
+  cursor: pointer;
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s;
+}
+.dropdownItem:hover {
+  background: var(--cream);
+  color: var(--terracotta);
+}
+.dropdownDanger {
+  color: #A32D2D;
+  border-top: 1px solid var(--border);
+}
+.dropdownDanger:hover {
+  background: #FCE8E8;
+  color: #A32D2D;
+}
+
+@media (max-width: 680px) {
+  .userName {
+    display: none;
+  }
+}
