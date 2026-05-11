@@ -7,7 +7,7 @@ const NAV_ITEMS = [
   { icon: '📅', label: 'My Bookings' },
   { icon: '🧑‍🍳', label: 'My Profile' },
   { icon: '🕐', label: 'My Availability' },
-  { icon: '🍽️', label: 'My Menu' },
+  { icon: '🍽️', label: 'My Cuisine' },
   { icon: '⭐', label: 'My Reviews' },
 ];
 
@@ -129,7 +129,7 @@ export default function ChefDashboardPage({ user }) {
             .then(() => { setToast('Availability added!'); })
             .catch(() => setToast('Could not add availability.'));
         }} />;
-      case 'My Menu':
+      case 'My Cuisine':
         return <MenuPanel dishes={dishes} chefId={chefProfile?.chef_id} onAdd={async (name, desc, price) => {
           try {
             const res = await fetch(
@@ -439,7 +439,7 @@ function MenuPanel({ dishes, onAdd }) {
   return (
     <>
       <div className={styles.panelHeader}>
-        <h1>My Menu</h1>
+        <h1>My Cuisine</h1>
         <p>Add dishes customers can request when booking you.</p>
       </div>
 
