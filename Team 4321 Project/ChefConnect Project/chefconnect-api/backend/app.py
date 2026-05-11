@@ -57,8 +57,22 @@ def get_bookings():
     return {"bookings": bookings}
 
 @app.post("/register")
-def register_user(username: str, email: str, password_hash: str, role: str):
-
+def register_user(
+    username: str,
+    email: str,
+    password_hash: str,
+    role: str,
+    card_number: str = None,
+    card_holder: str = None,
+    exp_month: str = None,
+    exp_year: str = None,
+    cvv: str = None,
+    billing_zip: str = None,
+    account_holder: str = None,
+    routing_number: str = None,
+    account_number: str = None,
+    bank_name: str = None,
+):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
@@ -67,7 +81,7 @@ def register_user(username: str, email: str, password_hash: str, role: str):
         role_id = 2
     else:
         role_id = 3
-    
+
     user_sql = """
     INSERT INTO User (username, email, password_hash, role_id)
     VALUES (%s, %s, %s, %s)
@@ -79,14 +93,31 @@ def register_user(username: str, email: str, password_hash: str, role: str):
 
     user_id = cursor.lastrowid
 
-
     if role.lower().strip() == "chef":
-        chef_sql = """
-        INSERT INTO Chef (user_id)
-        VALUES (%s)
-        """
-        cursor.execute(chef_sql, (user_id,))
+        # Insert chef row
+        cursor.execute("INSERT INTO Chef (user_id) VALUES (%s)", (user_id,))
         conn.commit()
+        chef_id = cursor.lastrowid
+
+        # If chef sent payout info, save it
+        if account_holder and routing_number and account_number:
+            payout_sql = """
+            INSERT INTO ChefPayout
+            (chef_id, account_holder, routing_number, account_number, bank_name)
+            VALUES (%s, %s, %s, %s, %s)
+            """
+            cursor.execute(payout_sql, (chef_id, account_holder, routing_number, account_number, bank_name))
+            conn.commit()
+    else:
+        # If customer sent card info, save it
+        if card_number and card_holder and exp_month and exp_year and cvv:
+            card_sql = """
+            INSERT INTO UserPaymentMethod
+            (user_id, card_number, card_holder, exp_month, exp_year, cvv, billing_zip)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(card_sql, (user_id, card_number, card_holder, exp_month, exp_year, cvv, billing_zip))
+            conn.commit()
 
     cursor.close()
     conn.close()
@@ -260,7 +291,8 @@ def create_booking(
     user_id: int,
     booking_date: str,
     booking_time: str,
-    customer_requests: str = None
+    customer_requests: str = None,
+    total_amount: float = 0.0,  # accept total from frontend
 ):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
@@ -268,8 +300,8 @@ def create_booking(
     check_sql = """
     SELECT *
     FROM Booking
-    WHERE chef_id = %s 
-    AND booking_date = %s 
+    WHERE chef_id = %s
+    AND booking_date = %s
     AND booking_time = %s
     AND status IN ('pending', 'confirmed')
     """
@@ -279,30 +311,25 @@ def create_booking(
     if existing:
         cursor.close()
         conn.close()
-
         return {"message": "This time slot is already booked."}
-    
+
+    # CHANGED: added total_amount column to insert
     booking_sql = """
-    INSERT INTO Booking 
-    (
-    chef_id, 
-    user_id, 
-    booking_date, 
-    booking_time,
-    status,
-    customer_requests
-    )
-    VALUES (%s, %s, %s, %s, %s, %s)
+    INSERT INTO Booking
+    (chef_id, user_id, booking_date, booking_time, status, customer_requests, total_amount)
+    VALUES (%s, %s, %s, %s, %s, %s, %s)
     """
 
-    cursor.execute(booking_sql,(chef_id, user_id, booking_date, booking_time, "pending", customer_requests))
+    cursor.execute(booking_sql, (chef_id, user_id, booking_date, booking_time, "pending", customer_requests, total_amount))
     conn.commit()
 
     booking_id = cursor.lastrowid
 
     cursor.close()
     conn.close()
-    return {"message": "Booking created successfully!", "booking_id": booking_id, "status": "pending"}
+    return {"message": "Booking created successfully!", "booking_id": booking_id, "status": "pending"
+    }
+
 
 @app.put("/bookings/{booking_id}/status")
 def update_booking_status(booking_id: int, status: str, user_id: int):
@@ -358,51 +385,118 @@ def get_user_bookings(user_id: int):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    sql = """
-    SELECT 
-        b.booking_id, 
-        b.booking_date, 
-        b.booking_time, 
-        b.status, 
-        b.customer_requests,
-        c.chef_id,
-        u.username AS chef_name
-    FROM Booking b
-    JOIN Chef c ON b.chef_id = c.chef_id
-    JOIN User u ON c.user_id = u.user_id
-    WHERE b.user_id = %s
-    ORDER BY b.booking_date DESC, b.booking_time DESC
-    """
+    # The procedure auto-computes "completed" status if the booking time has passed
+    cursor.callproc("GetUserBookingsWithStatus", (user_id,))
 
-    cursor.execute(sql, (user_id,))
-    bookings = cursor.fetchall()
+    bookings = []
+    for result in cursor.stored_results():
+        bookings = result.fetchall()
 
     cursor.close()
     conn.close()
     return {"bookings": bookings}
+
+@app.get("/users/{user_id}/pantry")
+def get_user_pantry(user_id: int):
+    """NEW: list a user's pantry ingredients"""
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    sql = """
+    SELECT pantry_id, ingredient_name, quantity, added_at
+    FROM UserPantry
+    WHERE user_id = %s
+    ORDER BY added_at DESC
+    """
+    cursor.execute(sql, (user_id,))
+    items = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+    return {"pantry": items}
+
+
+@app.post("/users/{user_id}/pantry")
+def add_pantry_item(user_id: int, ingredient_name: str, quantity: str = None):
+    """NEW: add an ingredient to user's pantry"""
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    try:
+        sql = """
+        INSERT INTO UserPantry (user_id, ingredient_name, quantity)
+        VALUES (%s, %s, %s)
+        """
+        cursor.execute(sql, (user_id, ingredient_name.strip(), quantity))
+        conn.commit()
+        new_id = cursor.lastrowid
+        return {"message": "Ingredient added!", "pantry_id": new_id}
+    except mysql.connector.Error as e:
+        conn.rollback()
+        return {"detail": f"Could not add ingredient: {str(e)}"}
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@app.delete("/users/{user_id}/pantry/{pantry_id}")
+def delete_pantry_item(user_id: int, pantry_id: int):
+    """NEW: remove an ingredient from user's pantry"""
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    # Make sure the row belongs to this user (basic auth check)
+    cursor.execute(
+        "SELECT pantry_id FROM UserPantry WHERE pantry_id = %s AND user_id = %s",
+        (pantry_id, user_id)
+    )
+    if not cursor.fetchone():
+        cursor.close()
+        conn.close()
+        return {"detail": "Ingredient not found in your pantry."}
+
+    cursor.execute("DELETE FROM UserPantry WHERE pantry_id = %s", (pantry_id,))
+    conn.commit()
+
+    cursor.close()
+    conn.close()
+    return {"message": "Ingredient removed."}
+
+@app.get("/users/{user_id}/payment-methods")
+def get_user_payment_methods(user_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    sql = """
+    SELECT
+        payment_method_id AS id,
+        CONCAT('Card') AS brand,
+        RIGHT(card_number, 4) AS last4,
+        CONCAT(exp_month, '/', RIGHT(exp_year, 2)) AS exp,
+        card_holder,
+        billing_zip,
+        1 AS isDefault
+    FROM UserPaymentMethod
+    WHERE user_id = %s
+    """
+    cursor.execute(sql, (user_id,))
+    methods = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+    return {"payment_methods": methods}
 
 @app.get("/chefs/{chef_id}/bookings")
 def get_chef_bookings(chef_id: int):
     conn = get_db_connection()
     cursor = conn.cursor(dictionary=True)
 
-    sql = """
-    SELECT 
-        b.booking_id, 
-        b.booking_date, 
-        b.booking_time, 
-        b.status, 
-        b.customer_requests,
-        u.user_id AS customer_id,
-        u.username AS customer_name
-    FROM Booking b
-    JOIN User u ON b.user_id = u.user_id
-    WHERE b.chef_id = %s
-    ORDER BY b.booking_date DESC, b.booking_time DESC
-    """
+    # CHANGED: now uses stored procedure GetChefBookingsWithStatus
+    cursor.callproc("GetChefBookingsWithStatus", (chef_id,))
 
-    cursor.execute(sql, (chef_id,))
-    bookings = cursor.fetchall()
+    bookings = []
+    for result in cursor.stored_results():
+        bookings = result.fetchall()
 
     cursor.close()
     conn.close()
@@ -461,6 +555,34 @@ def get_chef_reviews(chef_id: int):
     """
 
     cursor.execute(sql, (chef_id,))
+    reviews = cursor.fetchall()
+
+    cursor.close()
+    conn.close()
+    return {"reviews": reviews}
+
+@app.get("/users/{user_id}/reviews")
+def get_user_reviews(user_id: int):
+    """NEW: returns all reviews a customer has written"""
+    conn = get_db_connection()
+    cursor = conn.cursor(dictionary=True)
+
+    sql = """
+    SELECT
+        r.review_id,
+        r.chef_id,
+        r.rating,
+        r.comment,
+        r.created_at,
+        u.username AS chef_name
+    FROM Review r
+    JOIN Chef c ON r.chef_id = c.chef_id
+    JOIN User u ON c.user_id = u.user_id
+    WHERE r.user_id = %s
+    ORDER BY r.created_at DESC
+    """
+
+    cursor.execute(sql, (user_id,))
     reviews = cursor.fetchall()
 
     cursor.close()

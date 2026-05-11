@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import StatusBadge from '../components/StatusBadge';
-import { CHEFS } from '../data/chefs';
 import styles from './DashboardPage.module.css';
 
 
@@ -9,14 +8,12 @@ import styles from './DashboardPage.module.css';
 const NAV_ITEMS = [
   { icon: '🏠',   label: 'Dashboard' },
   { icon: '📅',   label: 'My Bookings' },
-  { icon: '🧑‍🍳', label: 'Saved Chefs' },
   { icon: '🥘',   label: 'Pantry Profile' },
   { icon: '⭐',   label: 'My Reviews' },
   { icon: '💳',   label: 'Payments' },
   { icon: '⚙️',   label: 'Settings' },
 ];
 
-const SAVED_CHEF_IDS = [1, 2, 4];
 
 const SEED_REVIEWS = [
   
@@ -26,18 +23,6 @@ const SEED_PAYMENT_METHODS = [
   
 ];
 
-const SEED_PANTRY = {
-  dietary:      ['Vegetarian'],
-  allergies:    ['Tree nuts'],
-  cuisinePrefs: ['West African', 'Indian', 'Italian'],
-  equipment:    ['Wok', 'Cast iron skillet', 'Stand mixer', 'Dutch oven'],
-  staples:      'Onions, garlic, ginger, tomatoes, rice, lentils, soy sauce, olive oil, eggs',
-};
-
-const DIETARY_OPTIONS   = ['Vegetarian', 'Vegan', 'Pescatarian', 'Gluten-free', 'Dairy-free', 'Halal', 'Kosher'];
-const ALLERGY_OPTIONS   = ['Peanuts', 'Tree nuts', 'Shellfish', 'Eggs', 'Soy', 'Wheat', 'Dairy', 'Sesame'];
-const CUISINE_OPTIONS   = ['West African', 'Caribbean', 'Italian', 'Japanese', 'Indian', 'Mexican', 'Korean', 'Middle Eastern', 'Latin American', 'Chinese'];
-const EQUIPMENT_OPTIONS = ['Wok', 'Cast iron skillet', 'Stand mixer', 'Dutch oven', 'Air fryer', 'Pressure cooker', 'Outdoor grill', 'Pizza stone', 'Mortar & pestle'];
 
 const SEED_NOTIFS = {
   bookingUpdates: true,
@@ -59,10 +44,9 @@ export default function DashboardPage( { user }) {
  
   // Data state
   const [bookings,       setBookings]      = useState([]);
-  const [savedChefs,     setSavedChefs]    = useState([]);
   const [reviews,        setReviews]       = useState(SEED_REVIEWS);
   const [paymentMethods, setPaymentMethods]= useState(SEED_PAYMENT_METHODS);
-  const [pantry,         setPantry]        = useState(SEED_PANTRY);
+  const [pantry,         setPantry]        = useState([]);   
   const [notifs,         setNotifs]        = useState(SEED_NOTIFS);
 
   // UI state
@@ -85,7 +69,7 @@ export default function DashboardPage( { user }) {
         chef:     b.chef_name,
        date:     b.booking_date,
        time:     typeof b.booking_time === 'string' ? b.booking_time.slice(0,5) : '',
-       amount:   0,
+       amount: parseFloat(b.total_amount) || 0,
        upcoming: b.status === 'pending' || b.status === 'accepted',
        reviewed: false,
         emoji:    '🧑‍🍳',
@@ -99,6 +83,27 @@ export default function DashboardPage( { user }) {
         setLoading(false);
       });
   }, [user]);
+
+  useEffect(() => {
+  if (!user) return;
+  fetch(`http://localhost:8000/users/${user.user_id}/pantry`)
+    .then(r => r.json())
+    .then(data => setPantry(data.pantry ?? []))
+    .catch(() => setPantry([]));
+}, [user]);
+
+  useEffect(() => {
+  if (!user) return;
+  fetch(`http://localhost:8000/users/${user.user_id}/payment-methods`)
+    .then(r => r.json())
+    .then(data => {
+      const cards = data.payment_methods ?? [];
+      setPaymentMethods(cards);
+    })
+    .catch(() => {
+      setPaymentMethods([]);
+    });
+}, [user]);
 
   /* Scroll to top when switching panels */
   useEffect(() => {
@@ -114,7 +119,7 @@ export default function DashboardPage( { user }) {
           chef:     b.chef_name,
           date:     b.booking_date,
           time:     typeof b.booking_time === 'string' ? b.booking_time.slice(0,5) : '',
-          amount:   0,
+         amount: parseFloat(b.total_amount) || 0,
           upcoming: b.status === 'pending' || b.status === 'accepted',
           reviewed: false,
           emoji:    '🧑‍🍳',
@@ -160,36 +165,49 @@ export default function DashboardPage( { user }) {
   function handleOpenReview(booking) {
     setReviewModal({
       bookingId:   booking.id,
-      chefId:      booking.chefId,
+      chefId:      booking.chef_id,
       chefName:    booking.chef,
       chefEmoji:   booking.emoji,
       bookingDate: booking.date,
     });
   }
 
-  function handleSubmitReview({ rating, comment }) {
+  async function handleSubmitReview({ rating, comment }) {
     if (!reviewModal) return;
     const { bookingId, chefId, chefName, chefEmoji, bookingDate } = reviewModal;
-    const newReview = {
-      id:          'r' + Date.now(),
-      bookingId, chefId, chefName, chefEmoji, rating, comment,
-      dateWritten: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      bookingDate,
-    };
-    setReviews(prev => [newReview, ...prev]);
-    setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, reviewed: true } : b));
-    setReviewModal(null);
-    setToast('Review submitted. Thanks!');
+
+    try {
+      const url = `http://localhost:8000/reviews` +
+        `?chef_id=${chefId}` +
+        `&user_id=${user.user_id}` +
+        `&rating=${rating}` +
+        `&comment=${encodeURIComponent(comment)}`;
+      const res = await fetch(url, { method: 'POST' });
+      const data = await res.json();
+
+      if (data.detail) {
+        setToast(data.detail);
+        return;
+      }
+
+      const newReview = {
+        id:          'r' + Date.now(),
+        bookingId, chefId, chefName, chefEmoji, rating, comment,
+        dateWritten: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        bookingDate,
+      };
+      setReviews(prev => [newReview, ...prev]);
+      setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, reviewed: true } : b));
+      setReviewModal(null);
+      setToast('Review submitted. Thanks!');
+    } catch {
+      setToast('Could not submit review. Please try again.');
+    }
   }
 
   function handleDeleteReview(reviewId) {
     setReviews(prev => prev.filter(r => r.id !== reviewId));
     setToast('Review deleted.');
-  }
-
-  function handleRemoveSaved(chefId) {
-    setSavedChefs(prev => prev.filter(c => c.id !== chefId));
-    setToast('Removed from saved chefs.');
   }
 
   function handleRemoveCard(pmId) {
@@ -206,23 +224,36 @@ export default function DashboardPage( { user }) {
     setToast('Card form will open once payments are wired up.');
   }
 
-  function togglePantry(category, value) {
-    setPantry(prev => {
-      const list = prev[category];
-      return {
-        ...prev,
-        [category]: list.includes(value)
-          ? list.filter(x => x !== value)
-          : [...list, value],
-      };
-    });
+async function handleAddPantryItem(name, quantity) {
+  if (!name.trim()) return;
+  try {
+    const url = `http://localhost:8000/users/${user.user_id}/pantry` +
+      `?ingredient_name=${encodeURIComponent(name.trim())}` +
+      `&quantity=${encodeURIComponent(quantity.trim() || '')}`;
+    const res = await fetch(url, { method: 'POST' });
+    const data = await res.json();
+    if (data.detail) {
+      setToast(data.detail);
+      return;
+    }
+    const refreshed = await fetch(`http://localhost:8000/users/${user.user_id}/pantry`).then(r => r.json());
+    setPantry(refreshed.pantry ?? []);
+    setToast('Ingredient added.');
+  } catch {
+    setToast('Could not add ingredient.');
   }
+}
 
-  function setStaples(val) {
-    setPantry(prev => ({ ...prev, staples: val }));
+async function handleRemovePantryItem(pantryId) {
+  try {
+    await fetch(`http://localhost:8000/users/${user.user_id}/pantry/${pantryId}`, { method: 'DELETE' });
+    setPantry(prev => prev.filter(item => item.pantry_id !== pantryId));
+    setToast('Ingredient removed.');
+  } catch {
+    setToast('Could not remove ingredient.');
   }
+}
 
-  function savePantry() { setToast('Pantry profile saved.'); }
   function toggleNotif(key) { setNotifs(prev => ({ ...prev, [key]: !prev[key] })); }
   function saveSettings() { setToast('Notification preferences saved.'); }
   function notImplemented() { setToast('This will be available once the backend is connected.'); }
@@ -236,10 +267,8 @@ export default function DashboardPage( { user }) {
     switch (activeNav) {
       case 'My Bookings':
         return <BookingsPanel bookings={bookings} onCancel={handleCancel} onReschedule={handleReschedule} onLeaveReview={handleOpenReview} />;
-      case 'Saved Chefs':
-        return <SavedChefsPanel savedChefs={savedChefs} onRemoveSaved={handleRemoveSaved} />;
       case 'Pantry Profile':
-        return <PantryPanel pantry={pantry} togglePantry={togglePantry} setStaples={setStaples} onSave={savePantry} />;
+       return <PantryPanel pantry={pantry} onAdd={handleAddPantryItem} onRemove={handleRemovePantryItem} />;
       case 'My Reviews':
         return <ReviewsPanel bookings={bookings} reviews={reviews} onLeaveReview={handleOpenReview} onDeleteReview={handleDeleteReview} />;
       case 'Payments':
@@ -306,7 +335,6 @@ function OverviewPanel({ user, bookings, onCancel, onReschedule, onLeaveReview }
     { label: 'Total Bookings', value: bookings.length,                                          sub: '' },
     { label: 'Total Spent',    value: `$${bookings.reduce((s,b) => s+(b.amount||0), 0).toFixed(2)}`, sub: '' },
     { label: 'Reviews Left',   value: bookings.filter(b => b.status==='completed' && !b.reviewed).length, sub: '' },
-    { label: 'Saved Chefs',    value: '—', sub: '' },
   ];
 
   return (
@@ -402,63 +430,84 @@ function BookingsPanel({ bookings, onCancel, onReschedule, onLeaveReview }) {
   );
 }
 
-function SavedChefsPanel({ savedChefs, onRemoveSaved }) {
+
+function PantryPanel({ pantry, onAdd, onRemove }) {
+  const [newName, setNewName]         = useState('');
+  const [newQuantity, setNewQuantity] = useState('');
+
+  function submit(e) {
+    e?.preventDefault();
+    if (!newName.trim()) return;
+    onAdd(newName, newQuantity);
+    setNewName('');
+    setNewQuantity('');
+  }
+
   return (
     <>
-      <PanelHeader title="Saved Chefs" sub="Quick access to chefs you want to book again." />
-      {savedChefs.length === 0 ? (
+      <PanelHeader title="Pantry Profile" sub="Add ingredients you have at home. Chefs you book will see this to plan around what's in your kitchen." />
+
+      <div className={styles.formCard}>
+        <h3 className={styles.formCardTitle}>Add an ingredient</h3>
+        <div className={styles.formGroup}>
+          <label htmlFor="pantry-name" className={styles.formLabel}>Ingredient</label>
+          <input
+            id="pantry-name"
+            className={styles.formInput || ''}
+            type="text"
+            value={newName}
+            onChange={e => setNewName(e.target.value)}
+            placeholder="e.g. Rice, olive oil, chicken thighs…"
+            onKeyDown={e => { if (e.key === 'Enter') submit(e); }}
+            style={{ padding: '0.65rem 0.9rem', borderRadius: '8px', border: '1px solid #ddd', width: '100%' }}
+          />
+        </div>
+        <div className={styles.formGroup}>
+          <label htmlFor="pantry-qty" className={styles.formLabel}>Quantity (optional)</label>
+          <input
+            id="pantry-qty"
+            type="text"
+            value={newQuantity}
+            onChange={e => setNewQuantity(e.target.value)}
+            placeholder="e.g. 2 lbs, half a bag, a few"
+            onKeyDown={e => { if (e.key === 'Enter') submit(e); }}
+            style={{ padding: '0.65rem 0.9rem', borderRadius: '8px', border: '1px solid #ddd', width: '100%' }}
+          />
+        </div>
+        <div className={styles.formActions}>
+          <button className={styles.savePrimary} onClick={submit}>Add to pantry</button>
+        </div>
+      </div>
+
+      <SectionHeader label="Your pantry" count={pantry.length} spaced />
+      {pantry.length === 0 ? (
         <div className={styles.emptyBox}>
-          <p className={styles.emptyTitle}>No saved chefs yet</p>
-          <p className={styles.emptyText}>Save chefs you love so you can book them again with one tap.</p>
-          <Link to="/" className={styles.emptyBtn}>Browse chefs</Link>
+          <p className={styles.emptyTitle}>Your pantry is empty</p>
+          <p className={styles.emptyText}>Add what you have at home so chefs can cook around it.</p>
         </div>
       ) : (
-        <div className={styles.savedGrid}>
-          {savedChefs.map(c => (
-            <div key={c.id} className={styles.savedCard}>
-              <div className={styles.savedImg}>
-                <span className={styles.savedEmoji}>{c.emoji}</span>
-                {c.badge && <span className={styles.savedBadge}>{c.badge}</span>}
-                <button className={styles.savedRemoveBtn} onClick={() => onRemoveSaved(c.id)} aria-label={`Remove ${c.name} from saved`}>×</button>
+        <div className={styles.formCard}>
+          {pantry.map(item => (
+            <div
+              key={item.pantry_id}
+              className={styles.settingsRow}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}
+            >
+              <div>
+                <span className={styles.settingsRowLabel}>{item.ingredient_name}</span>
+                {item.quantity && <span className={styles.settingsRowValue}>{item.quantity}</span>}
               </div>
-              <div className={styles.savedBody}>
-                <strong>{c.name}</strong>
-                <small>{c.location} · {c.experience} yrs</small>
-                <div className={styles.savedTags}>
-                  {c.tags.slice(0, 3).map(t => <span key={t} className={styles.savedTag}>{t}</span>)}
-                </div>
-                <div className={styles.savedFoot}>
-                  <span className={styles.savedRating}>★ {c.rating}</span>
-                  <span className={styles.savedPrice}>from ${c.price}/hr</span>
-                </div>
-                <Link to={`/chef/${c.id}`} className={styles.savedBookBtn}>Book again →</Link>
-              </div>
+              <button
+                className={styles.removeBtn}
+                onClick={() => onRemove(item.pantry_id)}
+                aria-label={`Remove ${item.ingredient_name}`}
+              >
+                ×
+              </button>
             </div>
           ))}
         </div>
       )}
-    </>
-  );
-}
-
-function PantryPanel({ pantry, togglePantry, setStaples, onSave }) {
-  return (
-    <>
-      <PanelHeader title="Pantry Profile" sub="Help your chefs cook for you better." />
-      <div className={styles.formCard}>
-        <PantryChipGroup label="Dietary restrictions" options={DIETARY_OPTIONS} selected={pantry.dietary} onToggle={v => togglePantry('dietary', v)} />
-        <PantryChipGroup label="Allergies" options={ALLERGY_OPTIONS} selected={pantry.allergies} onToggle={v => togglePantry('allergies', v)} />
-        <PantryChipGroup label="Favourite cuisines" options={CUISINE_OPTIONS} selected={pantry.cuisinePrefs} onToggle={v => togglePantry('cuisinePrefs', v)} />
-        <PantryChipGroup label="Kitchen equipment" options={EQUIPMENT_OPTIONS} selected={pantry.equipment} onToggle={v => togglePantry('equipment', v)} />
-        <div className={styles.formGroup}>
-          <label htmlFor="pantry-staples" className={styles.formLabel}>Pantry staples</label>
-          <p className={styles.formHelp}>Comma-separated. Helps Pantry Chefs plan a meal around what you already have.</p>
-          <textarea id="pantry-staples" className={styles.formTextarea} value={pantry.staples} onChange={e => setStaples(e.target.value)} placeholder="Onions, garlic, olive oil, eggs…" />
-        </div>
-        <div className={styles.formActions}>
-          <button className={styles.savePrimary} onClick={onSave}>Save changes</button>
-        </div>
-      </div>
     </>
   );
 }
@@ -686,18 +735,6 @@ function PastBookingCard({ booking, onLeaveReview }) {
   );
 }
 
-function PantryChipGroup({ label, options, selected, onToggle }) {
-  return (
-    <div className={styles.formGroup}>
-      <label className={styles.formLabel}>{label}</label>
-      <div className={styles.chipPicker}>
-        {options.map(o => (
-          <button key={o} type="button" className={`${styles.pickerChip} ${selected.includes(o) ? styles.pickerChipActive : ''}`} onClick={() => onToggle(o)}>{o}</button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 function StarsDisplay({ rating }) {
   return (

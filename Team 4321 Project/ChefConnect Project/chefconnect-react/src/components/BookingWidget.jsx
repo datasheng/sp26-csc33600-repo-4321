@@ -77,9 +77,16 @@ export default function BookingWidget({ chef }) {
 
   try {
     const res = await fetch(
-      `http://localhost:8000/bookings?chef_id=${chef.id}&user_id=${user.user_id}&booking_date=${bookingDate}&booking_time=${bookingTime}&customer_requests=${encodeURIComponent(specialRequest.trim())}`,
-      { method: 'POST' }
+  `http://localhost:8000/bookings` +
+    `?chef_id=${chef.id}` +
+    `&user_id=${user.user_id}` +
+    `&booking_date=${bookingDate}` +
+    `&booking_time=${bookingTime}` +
+    `&customer_requests=${encodeURIComponent(specialRequest.trim())}` +
+    `&total_amount=${total}`,   
+  { method: 'POST' }
     );
+
 
     if (!res.ok) {
       const err = await res.json();

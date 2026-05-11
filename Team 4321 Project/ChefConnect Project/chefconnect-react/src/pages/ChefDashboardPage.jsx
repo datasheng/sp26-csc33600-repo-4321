@@ -33,6 +33,7 @@ export default function ChefDashboardPage({ user }) {
   const [availability, setAvailability] = useState([]);
   const [chefProfile, setChefProfile] = useState(null);
   const [loading, setLoading]         = useState(true);
+  const [pantriesByBooking, setPantriesByBooking] = useState({});
 
   useEffect(() => {
     if (!user) return;
@@ -82,6 +83,16 @@ export default function ChefDashboardPage({ user }) {
       setToast('Could not update booking.');
     }
   }
+  async function fetchPantryForBooking(bookingId, customerId) {
+  if (pantriesByBooking[bookingId]) return;   // already loaded, skip
+  try {
+    const res = await fetch(`http://localhost:8000/users/${customerId}/pantry`);
+    const data = await res.json();
+    setPantriesByBooking(prev => ({ ...prev, [bookingId]: data.pantry ?? [] }));
+  } catch {
+    setPantriesByBooking(prev => ({ ...prev, [bookingId]: [] }));
+  }
+}
 
   function renderPanel() {
     if (loading) return <div className={styles.stateBox}><div className={styles.spinner} /><p>Loading dashboard…</p></div>;
@@ -113,7 +124,17 @@ export default function ChefDashboardPage({ user }) {
         return <ReviewsPanel reviews={reviews} />;
       case 'Overview':
       default:
-        return <OverviewPanel user={user} chef={chefProfile} bookings={bookings} reviews={reviews} onNav={setActiveNav} />;
+        return (
+      <OverviewPanel
+      user={user}
+      chef={chefProfile}
+      bookings={bookings}
+      reviews={reviews}
+      onNav={setActiveNav}
+      pantriesByBooking={pantriesByBooking}
+      fetchPantryForBooking={fetchPantryForBooking}
+  />
+);
     }
   }
 
@@ -150,7 +171,7 @@ export default function ChefDashboardPage({ user }) {
 }
 
 /* ── Overview ── */
-function OverviewPanel({ user, chef, bookings, reviews, onNav }) {
+function OverviewPanel({ user, chef, bookings, reviews, onNav, pantriesByBooking = {}, fetchPantryForBooking }) {
   const totalBookings = bookings.length;
   const avgRating     = reviews.length ? (reviews.reduce((s, r) => s + Number(r.rating), 0) / reviews.length).toFixed(2) : '—';
   const pending       = bookings.filter(b => b.status === 'pending').length;
@@ -192,7 +213,14 @@ function OverviewPanel({ user, chef, bookings, reviews, onNav }) {
         </div>
       ) : (
         <div className={styles.bookingList}>
-          {upcoming.map(b => <BookingCard key={b.booking_id} booking={b} />)}
+          {upcoming.map(b => (
+          <BookingCard
+          key={b.booking_id}
+          booking={b}
+          pantry={pantriesByBooking[b.booking_id]}
+          onLoadPantry={fetchPantryForBooking ? () => fetchPantryForBooking(b.booking_id, b.customer_id) : undefined}
+  />
+))}
         </div>
       )}
 
@@ -206,7 +234,7 @@ function OverviewPanel({ user, chef, bookings, reviews, onNav }) {
 }
 
 /* ── Bookings ── */
-function BookingsPanel({ bookings, onStatus }) {
+function BookingsPanel({ bookings, onStatus, pantriesByBooking = {}, fetchPantryForBooking }) {                                                 
   const [filter, setFilter] = useState('all');
 
   const filters = ['all', 'pending', 'accepted', 'declined', 'completed'];
@@ -231,7 +259,16 @@ function BookingsPanel({ bookings, onStatus }) {
         <div className={styles.emptyBox}><p className={styles.emptyText}>No bookings found.</p></div>
       ) : (
         <div className={styles.bookingList}>
-          {filtered.map(b => <BookingCard key={b.booking_id} booking={b} onStatus={onStatus} />)}
+          {filtered.map(b => (
+            <BookingCard
+              key={b.booking_id}
+              booking={b}
+              onStatus={onStatus}
+              pantry={pantriesByBooking[b.booking_id]}
+              onLoadPantry={fetchPantryForBooking ? () => fetchPantryForBooking(b.booking_id, b.customer_id) : undefined}
+              //          ^^^ CHANGED: guard against fetchPantryForBooking being undefined too
+            />
+          ))}
         </div>
       )}
     </>
@@ -426,8 +463,15 @@ function ReviewsPanel({ reviews }) {
 }
 
 /* ── Shared sub-components ── */
-function BookingCard({ booking, onStatus }) {
+function BookingCard({ booking, onStatus, pantry, onLoadPantry }) {
   const isPending = booking.status === 'pending';
+  const [showPantry, setShowPantry] = useState(false);   
+
+  function togglePantry() {
+    setShowPantry(s => !s);
+    if (!showPantry && onLoadPantry) onLoadPantry();
+  }
+
   return (
     <div className={styles.bookingCard}>
       <div className={styles.cardLeft}>
@@ -439,24 +483,69 @@ function BookingCard({ booking, onStatus }) {
       </div>
       <div className={styles.cardMid}>
         {booking.customer_requests && (
-            <div className={styles.requestBox}>
+          <div className={styles.requestBox}>
             <span className={styles.requestLabel}>Special request:</span>
             <p className={styles.requests}>"{booking.customer_requests}"</p>
-            </div>
+          </div>
+        )}
+
+        {/* pantry toggle button */}
+        {onLoadPantry && (
+          <button
+            type="button"
+            onClick={togglePantry}
+            style={{
+              marginTop: '0.5rem',
+              background: 'none',
+              border: '1px solid #ddd',
+              borderRadius: '6px',
+              padding: '0.35rem 0.7rem',
+              cursor: 'pointer',
+              fontSize: '0.85rem',
+            }}
+          >
+            {showPantry ? '▾ Hide pantry' : '▸ View customer pantry'}
+          </button>
+        )}
+
+        {/* pantry list (only shows when expanded) */}
+        {showPantry && (
+          <div style={{
+            marginTop: '0.5rem',
+            padding: '0.6rem 0.8rem',
+            background: '#fafafa',
+            borderRadius: '8px',
+            border: '1px solid #eee',
+          }}>
+            {pantry === undefined ? (
+              <small>Loading pantry…</small>
+            ) : pantry.length === 0 ? (
+              <small>Customer hasn't added any pantry ingredients yet.</small>
+            ) : (
+              <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
+                {pantry.map(item => (
+                  <li key={item.pantry_id} style={{ padding: '0.2rem 0', fontSize: '0.9rem' }}>
+                    <strong>{item.ingredient_name}</strong>
+                    {item.quantity && <span style={{ color: '#888' }}> — {item.quantity}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
         )}
       </div>
       <div className={styles.cardRight}>
         <span className={`${styles.statusBadge} ${styles['status_' + booking.status]}`}>{booking.status}</span>
         {onStatus && (
-            <div className={styles.cardActions}>
-             {isPending && <>
-                <button className={styles.btnAccept} onClick={() => onStatus(booking.booking_id, 'accepted')}>Accept</button>
-                <button className={styles.btnDecline} onClick={() => onStatus(booking.booking_id, 'declined')}>Decline</button>
-                </>}
+          <div className={styles.cardActions}>
+            {isPending && <>
+              <button className={styles.btnAccept} onClick={() => onStatus(booking.booking_id, 'accepted')}>Accept</button>
+              <button className={styles.btnDecline} onClick={() => onStatus(booking.booking_id, 'declined')}>Decline</button>
+            </>}
             {booking.status === 'accepted' && (
-                <button className={styles.btnDecline} onClick={() => onStatus(booking.booking_id, 'cancelled')}>Cancel</button>
-             )}
-            </div>
+              <button className={styles.btnDecline} onClick={() => onStatus(booking.booking_id, 'cancelled')}>Cancel</button>
+            )}
+          </div>
         )}
       </div>
     </div>

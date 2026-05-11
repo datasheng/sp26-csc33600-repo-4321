@@ -35,6 +35,10 @@ export default function RegisterPage({ onLogin }) {
     email: '',
     password: '',
     bio: '',
+    accountHolder: '',
+    routingNumber: '',
+   accountNumber: '',
+    bankName: '',
   });
   const [selectedEmoji, setSelectedEmoji]     = useState('👨‍🍳');
   const [selectedTags, setSelectedTags]       = useState([]);
@@ -83,12 +87,23 @@ export default function RegisterPage({ onLogin }) {
       setError('Password must be at least 6 characters.');
       return;
     }
+    if (!form.accountHolder.trim() || !form.routingNumber.trim() || !form.accountNumber.trim()) {
+      setError('Please fill in your payout info so we know where to send your earnings.');
+      return;
+    }
  
     setLoading(true);
     try {
       // 1. Register user as chef
       const res = await fetch(
-        `http://localhost:8000/register?username=${encodeURIComponent(form.username)}&email=${encodeURIComponent(form.email)}&password_hash=${encodeURIComponent(form.password)}&role=chef`,
+      'http://localhost:8000/register' +
+        `?username=${encodeURIComponent(form.username)}` +
+       `&email=${encodeURIComponent(form.email)}` +
+        `&password_hash=${encodeURIComponent(form.password)}` +
+        `&role=chef` +
+        `&routing_number=${encodeURIComponent(form.routingNumber)}` +
+        `&account_number=${encodeURIComponent(form.accountNumber)}` +
+        `&bank_name=${encodeURIComponent(form.bankName)}`,
         { method: 'POST' }
       );
  
@@ -304,7 +319,55 @@ export default function RegisterPage({ onLogin }) {
               ))}
             </div>
           </section>
- 
+ <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Payout Info</h2>
+            <p className={styles.sectionHint}>This is where we'll send your earnings.</p>
+
+            <div className={styles.group}>
+              <label>Account Holder Name</label>
+              <input
+                name="accountHolder"
+                value={form.accountHolder}
+                onChange={handleChange}
+                placeholder="Full name on the bank account"
+              />
+            </div>
+
+            <div className={styles.group}>
+              <label>Bank Name</label>
+              <input
+                name="bankName"
+                value={form.bankName}
+                onChange={handleChange}
+                placeholder="e.g. Chase, Bank of America"
+              />
+            </div>
+
+            <div className={styles.group}>
+              <label>Routing Number</label>
+              <input
+                name="routingNumber"
+                type="text"
+                inputMode="numeric"
+                maxLength={9}
+                value={form.routingNumber}
+                onChange={handleChange}
+                placeholder="9-digit routing number"
+              />
+            </div>
+
+            <div className={styles.group}>
+              <label>Account Number</label>
+              <input
+                name="accountNumber"
+                type="text"
+                inputMode="numeric"
+                value={form.accountNumber}
+                onChange={handleChange}
+                placeholder="Bank account number"
+              />
+            </div>
+          </section>
           {error && <p className={styles.error}>{error}</p>}
  
           <div className={styles.actions}>

@@ -112,6 +112,32 @@ CREATE TABLE Payment (
     FOREIGN KEY (chef_id) REFERENCES Chef(chef_id)
 );
 
+CREATE TABLE UserPaymentMethod (
+    payment_method_id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    card_number VARCHAR(20) NOT NULL,
+    card_holder VARCHAR(255) NOT NULL,
+    exp_month VARCHAR(2) NOT NULL,
+    exp_year VARCHAR(4) NOT NULL,
+    cvv VARCHAR(4) NOT NULL,
+    billing_zip VARCHAR(10),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES User(user_id),
+    UNIQUE (user_id)  -- one card per user for now
+);
+
+CREATE TABLE ChefPayout (
+    payout_id INT AUTO_INCREMENT PRIMARY KEY,
+    chef_id INT NOT NULL,
+    account_holder VARCHAR(255) NOT NULL,
+    routing_number VARCHAR(20) NOT NULL,
+    account_number VARCHAR(30) NOT NULL,
+    bank_name VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (chef_id) REFERENCES Chef(chef_id),
+    UNIQUE (chef_id)
+);
+
 UPDATE Role SET role_name = 'Admin' WHERE role_id = 1;
 UPDATE Role SET role_name = 'Chef' WHERE role_id = 2;
 UPDATE Role SET role_name = 'User' WHERE role_id = 3;
@@ -155,3 +181,5 @@ SELECT chef_id, rating
 FROM Chef;
 
 
+ALTER TABLE Booking
+ADD COLUMN total_amount DECIMAL(10, 2) DEFAULT 0.00;

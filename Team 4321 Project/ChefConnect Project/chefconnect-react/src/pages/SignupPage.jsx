@@ -8,10 +8,17 @@ export default function SignupPage( { onLogin }) {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+  username: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+  // NEW: card fields
+  cardNumber: '',
+  cardHolder: '',
+  expMonth: '',
+  expYear: '',
+  cvv: '',
+  billingZip: '',
   });
   const [error, setError]     = useState('');
   const [loading, setLoading] = useState(false);
@@ -29,6 +36,10 @@ export default function SignupPage( { onLogin }) {
     if (form.password.length < 6)       return 'Password must be at least 6 characters.';
     if (!form.confirmPassword)          return 'Please confirm your password.';
     if (form.password !== form.confirmPassword) return 'Passwords do not match.';
+    if (!form.cardNumber.trim() || form.cardNumber.replace(/\s/g, '').length < 13) return 'Please enter a valid card number.';
+    if (!form.cardHolder.trim()) return 'Please enter the cardholder name.';
+    if (!form.expMonth || !form.expYear) return 'Please enter the card expiration.';
+    if (!form.cvv || form.cvv.length < 3) return 'Please enter the CVV.';
     return '';
   }
 
@@ -42,9 +53,19 @@ export default function SignupPage( { onLogin }) {
     setLoading(true);
     try {
       const res = await fetch(
-        `http://localhost:8000/register?username=${encodeURIComponent(form.username)}&email=${encodeURIComponent(form.email)}&password_hash=${encodeURIComponent(form.password)}&role=customer`,
-        { method: 'POST' }
-      );
+          `http://localhost:8000/register` +
+          `?username=${encodeURIComponent(form.username)}` +
+          `&email=${encodeURIComponent(form.email)}` +
+          `&password_hash=${encodeURIComponent(form.password)}` +
+          `&role=customer` +
+          `&card_number=${encodeURIComponent(form.cardNumber.replace(/\s/g, ''))}` +
+          `&card_holder=${encodeURIComponent(form.cardHolder)}` +
+          `&exp_month=${encodeURIComponent(form.expMonth)}` +
+         `&exp_year=${encodeURIComponent(form.expYear)}` +
+          `&cvv=${encodeURIComponent(form.cvv)}` +
+          `&billing_zip=${encodeURIComponent(form.billingZip)}`,
+  { method: 'POST' }
+);
 
       if (!res.ok) {
         const err = await res.json();
@@ -85,7 +106,6 @@ export default function SignupPage( { onLogin }) {
         </div>
         <ul className={styles.benefits}>
           <li><span>✓</span> Book certified local chefs in minutes</li>
-          <li><span>✓</span> Save the chefs you love for next time</li>
           <li><span>✓</span> Cancel free up to 24 hours in advance</li>
         </ul>
       </aside>
@@ -159,7 +179,77 @@ export default function SignupPage( { onLogin }) {
                 onChange={handleChange}
               />
             </div>
+            <div className={styles.group}>
+          <label htmlFor="signup-cardnumber">Card Number</label>
+           <input
+             id="signup-cardnumber"
+             name="cardNumber"
+             type="text"
+             inputMode="numeric"
+             placeholder="1234 5678 9012 3456"
+              maxLength={19}
+            value={form.cardNumber}
+              onChange={handleChange}
+              />
+              </div>
 
+            <div className={styles.group}>
+            <label htmlFor="signup-cardholder">Cardholder Name</label>
+            <input
+            id="signup-cardholder"
+             name="cardHolder"
+            type="text"
+            placeholder="Name as it appears on card"
+             value={form.cardHolder}
+             onChange={handleChange}
+                 />
+              </div>
+
+              <div className={styles.group}>
+              <label>Expiration & CVV</label>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <input
+            name="expMonth"
+            type="text"
+            inputMode="numeric"
+            placeholder="MM"
+             maxLength={2}
+           value={form.expMonth}
+            onChange={handleChange}
+              />
+           <input
+            name="expYear"
+            type="text"
+           inputMode="numeric"
+            placeholder="YYYY"
+           maxLength={4}
+           value={form.expYear}
+           onChange={handleChange}
+           />
+          <input
+         name="cvv"
+         type="text"
+         inputMode="numeric"
+         placeholder="CVV"
+         maxLength={4}
+          value={form.cvv}
+         onChange={handleChange}
+         />
+        </div>
+        </div>
+
+<div className={styles.group}>
+  <label htmlFor="signup-zip">Billing ZIP (optional)</label>
+  <input
+    id="signup-zip"
+    name="billingZip"
+    type="text"
+    placeholder="10001"
+    maxLength={10}
+    value={form.billingZip}
+    onChange={handleChange}
+  />
+</div>
             <button
               type="submit"
               className={styles.submit}
