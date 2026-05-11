@@ -1,0 +1,621 @@
+.page {
+  padding-top: 64px;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: calc(100vh - 64px);
+}
+
+/* ── Sidebar ── */
+.sidebar {
+  background: var(--charcoal);
+  padding: 32px 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebarUser {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0 1.5rem 1.5rem;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  margin-bottom: 1rem;
+}
+
+.sidebarAvatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #c0392b;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-bottom: 0.25rem;
+}
+
+.sidebarUser strong {
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.sidebarUser small {
+  font-size: 0.75rem;
+  color: #aaa;
+}
+
+.sidebarNav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0 0.75rem;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.7rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  color: #aaa;
+  font-size: 0.9rem;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  position: relative;
+  transition: background 0.15s, color 0.15s;
+}
+
+.navLink:hover {
+  background: rgba(255,255,255,0.07);
+  color: #fff;
+}
+
+.navActive {
+  background: rgba(192,57,43,0.2);
+  color: #fff;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #c0392b;
+  margin-left: auto;
+}
+
+/* ── Main content ── */
+.main {
+  flex: 1;
+  padding: 2.5rem 2rem;
+  max-width: 900px;
+}
+
+/* ── Greeting ── */
+.greeting h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 0.25rem;
+}
+
+.greeting p {
+  color: #888;
+  margin: 0 0 2rem;
+}
+
+/* ── Stats ── */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.statCard {
+  background: #fff;
+  border: 1px solid #e8e4df;
+  border-radius: 12px;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.statLabel {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #aaa;
+  font-weight: 600;
+}
+
+.statValue {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+/* ── Section head ── */
+.sectionHead {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.tableLabel {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #aaa;
+  margin: 0;
+}
+
+.countPill {
+  background: #f0ece8;
+  color: #888;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
+/* ── Panel header ── */
+.panelHeader {
+  margin-bottom: 1.75rem;
+}
+
+.panelHeader h1 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 0.25rem;
+}
+
+.panelHeader p {
+  color: #888;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* ── Booking cards ── */
+.bookingList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.bookingCard {
+  background: #fff;
+  border: 1px solid #e8e4df;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.cardLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 160px;
+}
+
+.cardLeft div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.cardLeft strong {
+  font-size: 0.95rem;
+  color: #1a1a1a;
+}
+
+.cardLeft small {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.cardMid {
+  flex: 1;
+}
+
+.requests {
+  font-size: 0.875rem;
+  color: #666;
+  font-style: italic;
+  margin: 0;
+}
+
+.cardRight {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.cardActions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.miniAvatar {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #f0ece8;
+  color: #1a1a1a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.statusBadge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  text-transform: capitalize;
+}
+
+.status_pending   { background: #fff3cd; color: #856404; }
+.status_accepted  { background: #d1e7dd; color: #0f5132; }
+.status_declined  { background: #f8d7da; color: #842029; }
+.status_cancelled { background: #f0ece8; color: #888; }
+.status_completed { background: #cfe2ff; color: #084298; }
+
+.btnAccept {
+  padding: 0.4rem 0.9rem;
+  border-radius: 6px;
+  border: none;
+  background: #1a7a4a;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btnAccept:hover { opacity: 0.85; }
+
+.btnDecline {
+  padding: 0.4rem 0.9rem;
+  border-radius: 6px;
+  border: none;
+  background: #c0392b;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.btnDecline:hover { opacity: 0.85; }
+
+/* ── Filter row ── */
+.filterRow {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.filterChip {
+  padding: 0.4rem 0.9rem;
+  border: 1.5px solid #ddd;
+  border-radius: 999px;
+  background: #fff;
+  font-size: 0.85rem;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.filterChip:hover { border-color: #c0392b; color: #c0392b; }
+
+.filterChipActive {
+  border-color: #c0392b;
+  background: #c0392b;
+  color: #fff;
+}
+
+/* ── Form card ── */
+.formCard {
+  background: #fff;
+  border: 1px solid #e8e4df;
+  border-radius: 12px;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.formCardTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 0.25rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.formGroup label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.formInput {
+  padding: 0.7rem 0.9rem;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: #fafafa;
+  transition: border-color 0.2s;
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: #c0392b;
+}
+
+.formTextarea {
+  padding: 0.7rem 0.9rem;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: #fafafa;
+  resize: vertical;
+  transition: border-color 0.2s;
+}
+
+.formTextarea:focus {
+  outline: none;
+  border-color: #c0392b;
+}
+
+.formSelect {
+  padding: 0.7rem 0.9rem;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  background: #fafafa;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.savePrimary {
+  padding: 0.7rem 1.5rem;
+  background: #c0392b;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.15s;
+}
+
+.savePrimary:hover { opacity: 0.85; }
+
+.timeRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+/* ── Tags ── */
+.tagGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.tag {
+  padding: 0.4rem 0.9rem;
+  border: 1.5px solid #ddd;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  background: #fafafa;
+  color: #555;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: inherit;
+}
+
+.tag:hover { border-color: #c0392b; color: #c0392b; }
+
+.tagSelected {
+  border-color: #c0392b;
+  background: #c0392b;
+  color: #fff;
+}
+
+/* ── Dishes ── */
+.dishGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+  margin-top: 0.5rem;
+}
+
+.dishCard {
+  background: #fff;
+  border: 1px solid #e8e4df;
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+}
+
+.dishTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.35rem;
+}
+
+.dishTop strong { font-size: 0.95rem; color: #1a1a1a; }
+
+.dishPrice {
+  font-weight: 700;
+  color: #c0392b;
+  font-size: 0.9rem;
+}
+
+.dishDesc {
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0;
+}
+
+/* ── Reviews ── */
+.ratingBanner {
+  background: #fff;
+  border: 1px solid #e8e4df;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.ratingBig {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1a1a1a;
+}
+
+.ratingStars {
+  font-size: 1.5rem;
+  color: #f59e0b;
+}
+
+.ratingCount {
+  font-size: 0.9rem;
+  color: #888;
+}
+
+.reviewsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.reviewCard {
+  background: #fff;
+  border: 1px solid #e8e4df;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+}
+
+.reviewTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.reviewStars { color: #f59e0b; font-size: 1rem; }
+
+.reviewText {
+  font-size: 0.9rem;
+  color: #555;
+  margin: 0;
+  font-style: italic;
+}
+
+/* ── Empty states ── */
+.emptyBox {
+  background: #fff;
+  border: 1.5px dashed #ddd;
+  border-radius: 12px;
+  padding: 2.5rem;
+  text-align: center;
+}
+
+.emptyTitle {
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 0.35rem;
+}
+
+.emptyText {
+  color: #888;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* ── State box ── */
+.stateBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 4rem 2rem;
+  color: #888;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid #e8e4df;
+  border-top-color: #c0392b;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Toast ── */
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1a1a1a;
+  color: #fff;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  z-index: 999;
+  animation: fadeIn 0.2s ease;
+}
+.requestBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.requestLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #aaa;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }

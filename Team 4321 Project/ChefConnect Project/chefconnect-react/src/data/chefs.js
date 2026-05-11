@@ -76,21 +76,34 @@ function mergeChef(apiChef) {
   const id  = apiChef.chef_id ?? apiChef.id;
   const sup = CHEF_SUPPLEMENT[id] ?? {};
 
-  const name     = toDisplayName(apiChef.username ?? `chef_${id}`);
+  const name      = toDisplayName(apiChef.username ?? `chef_${id}`);
   const specialty = apiChef.specialty ?? '';
-  const location  = sup.location ?? '';
+  const location  = sup.location ?? 'New York, NY';
   const subtitle  = [specialty, location].filter(Boolean).join(' · ');
+
+  // Generate a default emoji based on chef_id if not in supplement
+  const defaultEmojis = ['👨‍🍳', '👩‍🍳', '🧑‍🍳',];
+  const defaultEmoji  = defaultEmojis[id % defaultEmojis.length];
+
+  // Build tags from specialty string if not in supplement
+  const defaultTags = specialty
+    ? specialty.split(',').map(t => t.trim()).filter(Boolean)
+    : ['Chef'];
 
   return {
     id,
     name,
-    bio:         apiChef.bio        ?? '',
-    rating:      apiChef.rating     ?? 0,
-    reviewCount: apiChef.review_count ?? 0,
-    price:       sup.price          ?? 0,
+    bio:          apiChef.bio        ?? '',
+    rating:       apiChef.rating     ?? 0,
+    reviewCount:  apiChef.review_count ?? 0,
+    bookingCount: sup.bookingCount   ?? 0,
+    price:        sup.price          ?? 0,
     location,
     subtitle,
-    ...sup,
+    emoji:        sup.emoji          ?? defaultEmoji,
+    badge:        sup.badge          ?? null,
+    experience:   sup.experience     ?? 0,
+    tags:         sup.tags           ?? defaultTags,
     dishes:       [],
     availability: DAY_ORDER.map(day => ({ day, hours: null })),
     reviews:      [],

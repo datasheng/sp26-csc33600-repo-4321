@@ -4,8 +4,7 @@ import { fetchChefs } from '../data/chefs';
 import styles from './BrowsePage.module.css';
 
 const CUISINES = [
-  'All', 'Caribbean', 'West African', 'Japanese', 'Italian', 'Indian',
-  'Latin American', 'Mexican', 'Korean', 'Middle Eastern',
+  'All', 'Caribbean', 'West African', 'Japanese', 'Italian', 'Indian', 'Mexican', 
 ];
 
 export default function BrowsePage() {
