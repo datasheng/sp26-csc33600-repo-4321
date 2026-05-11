@@ -56,20 +56,41 @@ export default function BookingWidget({ chef }) {
     return '';
   }
 
-  function handleBook(e) {
-    e.preventDefault();
-    setError('');
+ async function handleBook(e) {
+  e.preventDefault();
+  setError('');
 
-    const msg = validate();
-    if (msg) {
-      setError(msg);
+  const msg = validate();
+  if (msg) { setError(msg); return; }
+
+  // Get logged in user
+  const storedUser = localStorage.getItem('user');
+  const user = storedUser ? JSON.parse(storedUser) : null;
+
+  if (!user) {
+    setError('You must be logged in to book a chef.');
+    return;
+  }
+
+  const bookingDate = dateTime.split('T')[0];        
+  const bookingTime = dateTime.split('T')[1] + ':00'; // "18:30:00"
+
+  try {
+    const res = await fetch(
+      `http://localhost:8000/bookings?chef_id=${chef.id}&user_id=${user.user_id}&booking_date=${bookingDate}&booking_time=${bookingTime}&customer_requests=${encodeURIComponent(specialRequest.trim())}`,
+      { method: 'POST' }
+    );
+
+    if (!res.ok) {
+      const err = await res.json();
+      setError(err.detail || 'Booking failed. That slot may already be taken.');
       return;
     }
 
-    /* Backend stub. When the API is ready, POST to /api/bookings here.
-     * For now we forward all the data to the confirmation page. */
+    const data = await res.json();
+
     const booking = {
-      referenceId:    makeReferenceId(),
+      referenceId:    data.booking_id,
       chefId:         chef.id,
       chefName:       chef.name,
       chefEmoji:      chef.emoji,
@@ -87,8 +108,11 @@ export default function BookingWidget({ chef }) {
     };
 
     navigate('/booking/confirmation', { state: { booking } });
-  }
 
+  } catch {
+    setError('Could not connect to server. Is the backend running?');
+  }
+}
   return (
     <aside className={styles.card}>
       <h3 className={styles.title}>Book {chef?.name ?? 'this chef'}</h3>

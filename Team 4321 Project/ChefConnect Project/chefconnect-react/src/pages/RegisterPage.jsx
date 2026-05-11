@@ -1,129 +1,320 @@
 import { useState } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import styles from './RegisterPage.module.css';
-
-const STEPS = ['Account', 'Chef Profile', 'Availability', 'Membership'];
-
-const CUISINES = [
+ 
+const CUISINE_TAGS = [
   'West African', 'Caribbean', 'Italian', 'Japanese', 'Indian',
-  'Mexican', 'Korean', 'Middle Eastern', 'Latin American', 'Chinese', 'Vegan / Plant-based',
+  'Mexican', 'Korean', 'Middle Eastern', 'Latin American', 'Chinese',
+  'Vegan / Plant-based', 'Pantry Chef', 'Cuisine Chef',
 ];
-
-export default function RegisterPage() {
-  const [step, setStep] = useState(1);          // 1-based
-  const [selectedCuisines, setSelectedCuisines] = useState(['West African']);
+ 
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+ 
+const CHEF_EMOJIS = ['🧑🏻‍🍳', '👨🏻‍🍳', '👩🏻‍🍳', '🧑🏼‍🍳', '👨🏼‍🍳', '👩🏼‍🍳', '🧑🏽‍🍳', '👨🏽‍🍳', '👩🏽‍🍳', '🧑🏾‍🍳', '👨🏾‍🍳', '👩🏾‍🍳', '🧑🏿‍🍳', '👨🏿‍🍳', '👩🏿‍🍳',];
+ 
+const MEMBERSHIP_PLANS = [
+  {
+    id: 'basic',
+    name: 'Basic Chef',
+    price: 'Free',
+    perks: ['Listed in search results', 'Up to 20 bookings/month', 'Standard support'],
+  },
+  {
+    id: 'premium',
+    name: 'Premium Chef',
+    price: '$19/mo',
+    perks: ['Boosted in search results', 'Unlimited bookings', 'Priority support'],
+  },
+];
+ 
+export default function RegisterPage({ onLogin }) {
+  const navigate = useNavigate();
+ 
   const [form, setForm] = useState({
-    firstName: '', lastName: '', bio: '',
-    serviceType: 'Both', experience: '', rate: '', location: '',
+    username: '',
+    email: '',
+    password: '',
+    bio: '',
   });
-
-  function toggleCuisine(c) {
-    setSelectedCuisines(prev =>
-      prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]
-    );
-  }
-
+  const [selectedEmoji, setSelectedEmoji]     = useState('👨‍🍳');
+  const [selectedTags, setSelectedTags]       = useState([]);
+  const [availability, setAvailability]       = useState({});
+  const [membership, setMembership]           = useState('basic');
+  const [error, setError]                     = useState('');
+  const [loading, setLoading]                 = useState(false);
+ 
   function handleChange(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
   }
-
+ 
+  function toggleTag(tag) {
+    setSelectedTags(prev =>
+      prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]
+    );
+  }
+ 
+  function toggleDay(day) {
+    setAvailability(prev => {
+      if (prev[day]) {
+        const next = { ...prev };
+        delete next[day];
+        return next;
+      }
+      return { ...prev, [day]: { start: '09:00', end: '17:00' } };
+    });
+  }
+ 
+  function updateTime(day, field, value) {
+    setAvailability(prev => ({
+      ...prev,
+      [day]: { ...prev[day], [field]: value },
+    }));
+  }
+ 
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError('');
+ 
+    if (!form.username.trim() || !form.email.trim() || !form.password) {
+      setError('Please fill in your username, email, and password.');
+      return;
+    }
+    if (form.password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+ 
+    setLoading(true);
+    try {
+      // 1. Register user as chef
+      const res = await fetch(
+        `http://localhost:8000/register?username=${encodeURIComponent(form.username)}&email=${encodeURIComponent(form.email)}&password_hash=${encodeURIComponent(form.password)}&role=chef`,
+        { method: 'POST' }
+      );
+ 
+      if (!res.ok) {
+        const err = await res.json();
+        setError(err.detail || 'Registration failed. Username or email may already exist.');
+        setLoading(false);
+        return;
+      }
+ 
+      const data = await res.json();
+      const chefId = data.user_id;
+ 
+      // 2. Update chef profile (bio + specialty)
+      if (form.bio || selectedTags.length > 0) {
+        await fetch(
+          `http://localhost:8000/chefs/${chefId}/profile?bio=${encodeURIComponent(form.bio)}&specialty=${encodeURIComponent(selectedTags.join(', '))}`,
+          { method: 'PUT' }
+        ).catch(() => {});
+      }
+ 
+      // 3. Add availability slots
+      for (const [day, times] of Object.entries(availability)) {
+        await fetch(
+          `http://localhost:8000/chefs/${chefId}/availability?day_of_week=${encodeURIComponent(day)}&start_time=${encodeURIComponent(times.start + ':00')}&end_time=${encodeURIComponent(times.end + ':00')}`,
+          { method: 'POST' }
+        ).catch(() => {});
+      }
+ 
+      // 4. Log in
+      if (onLogin) {
+        onLogin({
+          user_id:  data.user_id,
+          username: form.username,
+          email:    form.email,
+          role:     'Chef',
+        });
+      }
+ 
+      navigate('/dashboard');
+    } catch {
+      setError('Could not connect to server. Is the backend running?');
+    } finally {
+      setLoading(false);
+    }
+  }
+ 
   return (
     <main className={styles.page}>
       <div className={styles.inner}>
-        <h1 className={styles.heading}>Become a Chef</h1>
-        <p className={styles.sub}>Fill in your profile and start accepting bookings in your neighbourhood.</p>
-
-        {/* Step indicator */}
-        <div className={styles.steps}>
-          {STEPS.map((s, i) => (
-            <div
-              key={s}
-              className={`${styles.step} ${i + 1 < step ? styles.done : ''} ${i + 1 === step ? styles.active : ''}`}
-            >
-              {i + 1} · {s}
-            </div>
-          ))}
+ 
+        {/* Header */}
+        <div className={styles.header}>
+          <h1 className={styles.heading}>Want to become a chef?</h1>
+          <p className={styles.sub}>Here's how — fill in your details and start taking bookings.</p>
         </div>
-
-        {/* ── Step 2: Chef Profile (active in prototype) ── */}
-        <div className={styles.form}>
-          <div className={styles.row}>
+ 
+        <form onSubmit={handleSubmit} noValidate className={styles.form}>
+ 
+          {/* ── Account ── */}
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Your Account</h2>
+ 
             <div className={styles.group}>
-              <label>First Name</label>
-              <input name="firstName" value={form.firstName} onChange={handleChange} placeholder="Anika" />
+              <label>Username</label>
+              <input
+                name="username"
+                value={form.username}
+                onChange={handleChange}
+                placeholder="e.g. chef_anika"
+                autoComplete="username"
+              />
             </div>
+ 
             <div className={styles.group}>
-              <label>Last Name</label>
-              <input name="lastName" value={form.lastName} onChange={handleChange} placeholder="Osei" />
+              <label>Email</label>
+              <input
+                name="email"
+                type="email"
+                value={form.email}
+                onChange={handleChange}
+                placeholder="you@example.com"
+                autoComplete="email"
+              />
             </div>
-          </div>
-
-          <div className={styles.group}>
-            <label>Short Bio</label>
-            <textarea
-              name="bio"
-              value={form.bio}
-              onChange={handleChange}
-              placeholder="Tell customers about your cooking background, specialties, and style…"
-            />
-          </div>
-
-          <div className={styles.group}>
-            <label>Specialty Cuisines</label>
-            <div className={styles.cuisinePicker}>
-              {CUISINES.map(c => (
+ 
+            <div className={styles.group}>
+              <label>Password</label>
+              <input
+                name="password"
+                type="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="At least 6 characters"
+                autoComplete="new-password"
+              />
+            </div>
+          </section>
+ 
+          {/* ── Chef Profile ── */}
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Your Chef Profile</h2>
+ 
+            {/* Emoji picker */}
+            <div className={styles.group}>
+              <label>Pick your chef emoji</label>
+              <div className={styles.emojiGrid}>
+                {CHEF_EMOJIS.map(e => (
+                  <button
+                    key={e}
+                    type="button"
+                    className={`${styles.emojiBtn} ${selectedEmoji === e ? styles.emojiSelected : ''}`}
+                    onClick={() => setSelectedEmoji(e)}
+                    aria-label={`Select emoji ${e}`}
+                  >
+                    {e}
+                  </button>
+                ))}
+              </div>
+            </div>
+ 
+            {/* Bio */}
+            <div className={styles.group}>
+              <label>Your description</label>
+              <textarea
+                name="bio"
+                value={form.bio}
+                onChange={handleChange}
+                placeholder="Tell customers about your cooking background, specialties, and style…"
+                rows={4}
+              />
+            </div>
+ 
+            {/* Tags */}
+            <div className={styles.group}>
+              <label>Cuisine tags</label>
+              <div className={styles.tagGrid}>
+                {CUISINE_TAGS.map(tag => (
+                  <button
+                    key={tag}
+                    type="button"
+                    className={`${styles.tag} ${selectedTags.includes(tag) ? styles.tagSelected : ''}`}
+                    onClick={() => toggleTag(tag)}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </section>
+ 
+          {/* ── Availability ── */}
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Your Availability</h2>
+            <p className={styles.sectionHint}>Select the days you're available and set your hours.</p>
+ 
+            <div className={styles.availList}>
+              {DAYS.map(day => {
+                const active = !!availability[day];
+                return (
+                  <div key={day} className={`${styles.dayRow} ${active ? styles.dayRowActive : ''}`}>
+                    <button
+                      type="button"
+                      className={`${styles.dayToggle} ${active ? styles.dayToggleOn : ''}`}
+                      onClick={() => toggleDay(day)}
+                    >
+                      {day}
+                    </button>
+                    {active && (
+                      <div className={styles.timeInputs}>
+                        <input
+                          type="time"
+                          value={availability[day].start}
+                          onChange={e => updateTime(day, 'start', e.target.value)}
+                        />
+                        <span>to</span>
+                        <input
+                          type="time"
+                          value={availability[day].end}
+                          onChange={e => updateTime(day, 'end', e.target.value)}
+                        />
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+ 
+          {/* ── Membership ── */}
+          <section className={styles.section}>
+            <h2 className={styles.sectionTitle}>Choose Your Plan</h2>
+ 
+            <div className={styles.planGrid}>
+              {MEMBERSHIP_PLANS.map(plan => (
                 <button
-                  key={c}
+                  key={plan.id}
                   type="button"
-                  className={`${styles.cuisineChip} ${selectedCuisines.includes(c) ? styles.cuisineSelected : ''}`}
-                  onClick={() => toggleCuisine(c)}
+                  className={`${styles.planCard} ${membership === plan.id ? styles.planSelected : ''}`}
+                  onClick={() => setMembership(plan.id)}
                 >
-                  {c}
+                  <div className={styles.planTop}>
+                    <span className={styles.planName}>{plan.name}</span>
+                    <span className={styles.planPrice}>{plan.price}</span>
+                  </div>
+                  <ul className={styles.planPerks}>
+                    {plan.perks.map(p => <li key={p}>✓ {p}</li>)}
+                  </ul>
                 </button>
               ))}
             </div>
-          </div>
-
-          <div className={styles.group}>
-            <label>Service Type</label>
-            <select name="serviceType" value={form.serviceType} onChange={handleChange}>
-              <option value="cuisine">Cuisine Chef only (I bring ingredients)</option>
-              <option value="pantry">Pantry Chef only (use client's ingredients)</option>
-              <option value="Both">Both</option>
-            </select>
-          </div>
-
-          <div className={styles.row}>
-            <div className={styles.group}>
-              <label>Years of Experience</label>
-              <input name="experience" type="number" value={form.experience} onChange={handleChange} placeholder="3" />
-            </div>
-            <div className={styles.group}>
-              <label>Hourly Rate ($)</label>
-              <input name="rate" type="number" value={form.rate} onChange={handleChange} placeholder="85" />
-            </div>
-          </div>
-
-          <div className={styles.group}>
-            <label>Service Area</label>
-            <input name="location" value={form.location} onChange={handleChange} placeholder="Brooklyn, NY" />
-          </div>
-
+          </section>
+ 
+          {error && <p className={styles.error}>{error}</p>}
+ 
           <div className={styles.actions}>
-            <button
-              className="btn-ghost"
-              onClick={() => setStep(s => Math.max(1, s - 1))}
-              disabled={step === 1}
-            >
-              ← Back
-            </button>
-            <button
-              className="btn-primary"
-              onClick={() => setStep(s => Math.min(STEPS.length, s + 1))}
-            >
-              {step === STEPS.length ? 'Submit Application' : `Continue → ${STEPS[step]}`}
+            <button type="submit" className="btn-primary" disabled={loading}>
+              {loading ? 'Creating your profile…' : 'Join as a Chef →'}
             </button>
           </div>
-        </div>
+ 
+          <p className={styles.loginNote}>
+            Already have an account? <Link to="/login">Log in</Link>
+          </p>
+ 
+        </form>
       </div>
     </main>
   );
